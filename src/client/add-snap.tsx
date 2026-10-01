@@ -10,13 +10,26 @@ import { openStream } from './dual-camera.js'
 import { askForMotion } from './upright.js'
 import { PickedPreview } from './picked-preview.js'
 import { postSnap, type SentSnap } from './snap-upload.js'
+import type { TagChoice } from '../types.js'
+import { clientFeatures } from './config.js'
+import { VoiceNote } from './voice-note.js'
+import { sendVoiceSnap, voiceSnapKey } from './voice-snap.js'
+import { formatClock } from './recorder.js'
+import { forget, indexedDbVault, keepMeta, keepNoteId, memoryVault } from './recording-vault.js'
 import { DANGER, HAIRLINE, INK, MUTED, ON_INK, PLACEHOLDER, SERIF } from './theme.js'
 
 // Two ways to a snap and one way to send it. Take a snap opens the camera and Choose a photo
 // opens the library; both happen inside the tap, or iOS refuses them. Either one ends as a file,
-// and the sheet rises on the file, for an optional caption and Send.
-export function AddSnap() {
+// and the sheet rises on the file, for an optional caption and Send. Each option the app turned on
+// adds its own piece (a voice note, "just us", a tag) and with every option off nothing is added.
+export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice[]; languages?: readonly string[] } = {}) {
   const router = useRouter()
+  const f = clientFeatures()
+  const [justUs, setJustUs] = useState(false)
+  const [tag, setTag] = useState('')
+  const [voice, setVoice] = useState<{ blob: Blob; durationSec: number; id: string } | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [language, setLanguage] = useState('auto')
   const photos = useRef<HTMLInputElement>(null)
   const videos = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -51,16 +64,32 @@ export function AddSnap() {
 
   const pickInstead = () => { setCamera(null); photos.current?.click() }
 
-  const close = () => { setFile(null); setCaption(''); setState('idle'); setProgress(0); sent.current = null; drawn.current = false }
+  const close = () => {
+    setFile(null); setCaption(''); setState('idle'); setProgress(0); sent.current = null; drawn.current = false
+    setVoice(null); setJustUs(false); setTag('')
+  }
+
+  // A voice note is already held in the phone's vault; what was typed for it is kept beside it
+  // before the send, so a send that fails is resent later as it was meant. Let go once filed.
+  const sendVoice = async (v: { blob: Blob; durationSec: number; id: string }, extra: { justUs?: boolean; tags?: string[] }) => {
+    const store = indexedDbVault() ?? memoryVault()
+    const meta = { caption, language, ...extra }
+    await keepMeta(store, v.id, meta)
+    await sendVoiceSnap(v.blob, v.durationSec, v.id, meta, { onNewId: (fresh) => keepNoteId(store, v.id, voiceSnapKey(fresh)) })
+    await forget(store, v.id)
+  }
 
   const send = async () => {
-    if (!file || state === 'sending') return
+    if ((!file && !voice) || state === 'sending') return
     setState('sending')
+    const extra = { ...(justUs ? { justUs: true } : {}), ...(tag ? { tags: [tag] } : {}) }
     try {
-      await postSnap(file, caption, {
+      if (voice) await sendVoice(voice, extra)
+      else if (file) await postSnap(file, caption, {
         onProgress: setProgress, composed: drawn.current,
         ...(sent.current ? { sent: sent.current } : {}),
         onSent: (s) => { sent.current = s },
+        ...(Object.keys(extra).length ? { extra } : {}),
       })
       close()
       router.refresh()
@@ -72,14 +101,14 @@ export function AddSnap() {
   return (
     <>
       <div className="mx-4 flex flex-col gap-3">
-        <button
+        {f.doubleCamera && <button
           type="button"
           onClick={openCamera}
           className="flex h-14 items-center justify-center rounded-2xl text-[17px] font-medium transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none"
           style={{ backgroundColor: INK, color: ON_INK }}
         >
           Double camera photo
-        </button>
+        </button>}
         <div className="flex gap-3">
           <button
             type="button"
@@ -97,6 +126,16 @@ export function AddSnap() {
           >
             Video
           </button>
+          {f.voiceSnaps && (
+            <button
+              type="button"
+              onClick={() => setRecording(true)}
+              className="flex h-12 flex-1 items-center justify-center rounded-2xl text-[15px] transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none"
+              style={{ color: INK, border: `1px solid ${HAIRLINE}` }}
+            >
+              Voice note
+            </button>
+          )}
         </div>
       </div>
       {camera && (
@@ -104,11 +143,27 @@ export function AddSnap() {
       )}
       <PhotoInput ref={photos} label="Choose a photo" accept="image/*" multiple={false} onFiles={picked} />
       <PhotoInput ref={videos} label="Choose a video" accept="video/*" multiple={false} onFiles={picked} />
-      {file && (
+      {recording && (
+        <BottomSheet title="Voice note" onClose={() => setRecording(false)}>
+          <VoiceNote onCancel={() => setRecording(false)} onRecorded={(r) => { setRecording(false); sent.current = null; setVoice(r) }} />
+        </BottomSheet>
+      )}
+      {(file || voice) && (
         <BottomSheet title="New snap" onClose={close} locked={state === 'sending'}>
           <div className="relative mx-auto mt-3 aspect-square w-40 overflow-hidden rounded-xl" style={{ backgroundColor: HAIRLINE }}>
-            <PickedPreview photo={{ id: 'snap', file }} />
+            {file ? <PickedPreview photo={{ id: 'snap', file }} /> : voice && (
+              <span className="flex h-full w-full items-center justify-center text-[28px]" style={{ color: INK, fontFamily: SERIF }}>{formatClock(voice.durationSec)}</span>
+            )}
           </div>
+          {voice && languages?.length ? (
+            <select
+              aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}
+              className="mx-auto mt-3 block h-11 rounded-2xl px-3 text-sm" style={{ color: INK, border: `1px solid ${HAIRLINE}` }}
+            >
+              <option value="auto">Any language</option>
+              {languages.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          ) : null}
           <label htmlFor="snap-caption" className="sr-only">Caption</label>
           <textarea
             id="snap-caption"
@@ -120,6 +175,26 @@ export function AddSnap() {
             className="mt-4 w-full resize-none rounded-2xl bg-white/70 px-4 py-3 text-[17px] leading-relaxed outline-none placeholder:text-[color:var(--cowitness-placeholder)] focus:bg-white"
             style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}`, ['--cowitness-placeholder' as string]: PLACEHOLDER }}
           />
+          {f.justUs && (
+            <button
+              type="button" role="switch" aria-checked={justUs} aria-label="Just us" onClick={() => setJustUs(!justUs)}
+              className="mt-3 flex h-11 w-full items-center justify-between text-sm" style={{ color: INK }}
+            >
+              <span>Just us</span><span style={{ color: MUTED }}>{justUs ? 'Only the people who share see this' : 'Off'}</span>
+            </button>
+          )}
+          {f.tags && tagChoices.length > 0 && (
+            <label className="mt-3 block text-sm" style={{ color: INK }}>
+              Tag
+              <select
+                aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}
+                className="mt-1 h-11 w-full rounded-2xl px-3" style={{ border: `1px solid ${HAIRLINE}` }}
+              >
+                <option value="">None</option>
+                {tagChoices.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </label>
+          )}
           <div className="mt-3 flex items-center justify-between">
             <span aria-live="polite" className="text-sm" style={{ color: state === 'failed' ? DANGER : MUTED }}>
               {state === 'failed' ? 'Not sent. Try again.' : state === 'sending' && progress > 0 ? `Sending ${Math.round(progress * 100)}%` : ''}

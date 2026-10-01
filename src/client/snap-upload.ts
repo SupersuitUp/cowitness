@@ -19,7 +19,12 @@ export interface SnapOptions {
   sent?: SentSnap | null
   /** Told once the bytes are stored, before the filing, so a failed filing can be retried alone. */
   onSent?(sent: SentSnap): void
+  /** The share sheet's switches, when their options are on. Absent: the filing is as it always was. */
+  extra?: SnapExtra
 }
+
+export interface SnapExtra { justUs?: boolean; tags?: string[] }
+const extraBody = (extra?: SnapExtra) => ({ ...(extra?.justUs ? { justUs: true } : {}), ...(extra?.tags?.length ? { tags: extra.tags } : {}) })
 
 // A second filing of the same id is refused when the first one landed (the ticket is claimed and
 // gone) or when the stored copy can never be filed. Each app's pipeline words that refusal its own
@@ -37,10 +42,10 @@ const ASK_WHETHER_FILED = new Set([400, 403, 409])
 // snap is found under that id, which is success. Only a stored copy that is truly gone starts
 // over from a fresh ticket.
 export async function postSnap(file: File, caption: string, opts: SnapOptions = {}): Promise<void> {
-  if (opts.sent && (await fileSnap(file, caption, opts.sent, true)) === 'filed') return
+  if (opts.sent && (await fileSnap(file, caption, opts.sent, true, opts.extra)) === 'filed') return
   const sent = await sendBytes(file, opts.onProgress, opts.composed === true)
   opts.onSent?.(sent)
-  await fileSnap(file, caption, sent, false)
+  await fileSnap(file, caption, sent, false, opts.extra)
 }
 
 async function sendBytes(file: File, onProgress?: (fraction: number) => void, composed = false): Promise<SentSnap> {
@@ -57,16 +62,16 @@ async function sendBytes(file: File, onProgress?: (fraction: number) => void, co
   return { kind: 'photo', photoId }
 }
 
-async function fileSnap(file: File, caption: string, sent: SentSnap, retry: boolean): Promise<'filed' | 'gone'> {
+async function fileSnap(file: File, caption: string, sent: SentSnap, retry: boolean, extra?: SnapExtra): Promise<'filed' | 'gone'> {
   const stamp = Number.isFinite(file.lastModified) && file.lastModified > 0 ? file.lastModified : null
   const shotAt = sent.kind === 'photo' ? await takenAt(file) : undefined
   const done = sent.kind === 'video'
     ? await postJson(`${clientConfig().apiBase}/video`, {
       photoId: sent.photoId, caption, durationSec: sent.meta.durationSec, width: sent.meta.width, height: sent.meta.height,
-      ...(stamp ? { takenAt: localWallClock(stamp) } : {}),
+      ...(stamp ? { takenAt: localWallClock(stamp) } : {}), ...extraBody(extra),
     })
     : await postJson(`${clientConfig().apiBase}/photo`, {
-      photoId: sent.photoId, caption, ...(shotAt ? { clientTakenAt: shotAt } : {}),
+      photoId: sent.photoId, caption, ...(shotAt ? { clientTakenAt: shotAt } : {}), ...extraBody(extra),
     })
   if (done.ok) return 'filed'
   const reason = await refusal(done)

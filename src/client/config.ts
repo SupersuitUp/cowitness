@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Comment, MemberNames } from '../types.js'
+import { resolveFeatures, type CowitnessFeatures } from '../features.js'
 
 // What a snap's conversation slot is given. The app draws the conversation itself, so a snap's
 // messages look exactly like every other conversation in that app.
@@ -28,6 +29,8 @@ export interface CowitnessClientConfig {
   vaultName: string
   /** Draws the conversation under a snap. */
   renderThread(props: ThreadSlotProps): ReactNode
+  /** Which options are on, the same value the app gives its host. Absent: none. */
+  features?: Partial<CowitnessFeatures>
 }
 
 let current: CowitnessClientConfig | null = null
@@ -40,3 +43,6 @@ export function clientConfig(): CowitnessClientConfig {
   if (!current) throw new Error('Cowitness is not configured: render its screens inside <CowitnessProvider>')
   return current
 }
+
+// The options the screens draw for. Unconfigured or absent, every option is off.
+export const clientFeatures = (): CowitnessFeatures => resolveFeatures(current?.features)

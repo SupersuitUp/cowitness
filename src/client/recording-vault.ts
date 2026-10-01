@@ -19,6 +19,8 @@ export interface VaultRecord {
   /** The recorder reached its own stop. False means the page died mid-sentence. */
   stopped: boolean
   chunks: Blob[]
+  /** What was typed for it (a voice snap's caption and switches). Absent on a reaction's. */
+  meta?: Record<string, unknown>
 }
 
 export interface VaultStore {
@@ -33,8 +35,12 @@ export interface VaultStore {
 // offered back and left alone.
 export const VAULT_KEEP_DAYS = 30
 
-export const newRecordingId = () =>
-  `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+// The id is the one the recording is filed under, so it must not be guessable: 80 bits from the
+// platform's cryptographic randomness, never Math.random.
+export const newRecordingId = () => {
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(10))
+  return `r-${Date.now().toString(36)}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
+}
 
 // Every write to one recording goes through here, in the order it was called. keepChunk and
 // endRecording each read the record and write it back, and the recorder fires its last
@@ -82,6 +88,26 @@ export function keepChunk(store: VaultStore, id: string, chunk: Blob, atSec?: nu
     if (!rec) return
     const durationSec = typeof atSec === 'number' && atSec > rec.durationSec ? Math.round(atSec) : rec.durationSec
     await store.put({ ...rec, chunks: [...rec.chunks, chunk], durationSec })
+  })
+}
+
+// What was typed for a held recording (a voice snap's caption, its switches), kept with it so a
+// resend files it as it was meant.
+export function keepMeta(store: VaultStore, id: string, meta: Record<string, unknown>): Promise<void> {
+  return inOrder(store, id, async () => {
+    const rec = await store.get(id)
+    if (!rec) return
+    await store.put({ ...rec, meta })
+  })
+}
+
+// What a held recording is for, changed: a voice snap sent under a fresh id is held under that id
+// from then on, so a later resend files the snap the server may already have started.
+export function keepNoteId(store: VaultStore, id: string, noteId: string): Promise<void> {
+  return inOrder(store, id, async () => {
+    const rec = await store.get(id)
+    if (!rec) return
+    await store.put({ ...rec, noteId })
   })
 }
 

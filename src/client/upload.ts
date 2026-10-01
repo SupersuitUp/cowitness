@@ -57,7 +57,7 @@ export function putWithProgress(
     xhr.open('PUT', url)
     for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v)
     xhr.upload.onprogress = (e) => { if (e.lengthComputable && e.total > 0) onProgress?.(e.loaded / e.total) }
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`upload failed ${xhr.status}`)))
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error(`upload failed ${xhr.status}`), { status: xhr.status })))
     xhr.onerror = () => reject(new Error('upload failed'))
     xhr.onabort = () => reject(new Error('upload aborted'))
     xhr.send(body)

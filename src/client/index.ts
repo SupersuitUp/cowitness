@@ -27,3 +27,9 @@ export {
   grabAndClose, THUMB_EDGE, frameThumb, cameraConstraints, openStream, playing, browserCamera,
   type Facing, type Frame, type Camera, type Shot, type CameraIo,
 } from './dual-camera.js'
+export { clientFeatures } from './config.js'
+export { VoiceNote } from './voice-note.js'
+export { VoiceMedia } from './voice-media.js'
+export { sendVoiceSnap, sendHeldVoiceSnaps, voiceSnapKey, type VoiceSnapMeta, type VoiceSnapOptions } from './voice-snap.js'
+export { sendReaction, sendHeld, reactionKey } from './reaction-send.js'
+export { keepMeta, keepNoteId } from './recording-vault.js'
