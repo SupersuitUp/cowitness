@@ -9,7 +9,7 @@ import {
 } from '../snap-rules.js'
 import { snapRow, type SnapRow } from '../format.js'
 import { spokenLanguage } from '../language.js'
-import { parsePromptPatch, promptsDue } from '../prompts.js'
+import { parsePromptPatch, promptsDue, validPromptTimes } from '../prompts.js'
 import { zoned } from '../zoned.js'
 import { resolveFeatures, type CowitnessFeatures } from '../features.js'
 import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView } from '../types.js'
@@ -265,8 +265,17 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     const claims = host.db().collection(p.collection)
     const sent = new Set((await claims.where('dayKey', '==', today).get()).docs.map((d) => d.id))
     const done: string[] = []
-    for (const due of promptsDue(now, p.timeZone, await p.people(), sent)) {
-      try { await claims.doc(due.slotKey).create({ dayKey: today, person: due.key, sentAt: now.toISOString() }) } catch { continue }
+    const people = (await p.people()).filter((x) => {
+      if (validPromptTimes(x.times)) return true
+      report('prompts.times invalid', { person: x.key })
+      return false
+    })
+    for (const due of promptsDue(now, p.timeZone, people, sent)) {
+      try { await claims.doc(due.slotKey).create({ dayKey: today, person: due.key, sentAt: now.toISOString() }) } catch (err) {
+        // Already claimed (gRPC 6) is the normal "someone sent it"; anything else is reported.
+        if ((err as { code?: unknown }).code !== 6) report('prompts.claim failed', err)
+        continue
+      }
       try { await p.nudge(due.key, due.slotKey) } catch (err) { report('prompts.nudge failed', err) }
       done.push(due.slotKey)
     }

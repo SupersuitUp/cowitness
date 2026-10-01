@@ -51,6 +51,42 @@ describe('sending reminders', () => {
     expect(await store.sendDuePrompts(AT)).toEqual([])
     expect(log).toHaveBeenCalledWith('prompts.nudge failed', expect.any(Error))
   })
+  it('skips silently when the slot is already claimed, but reports any other claim failure and moves on', async () => {
+    const two: PromptPerson<M>[] = [{ key: 'ana', times: ['08:15', '08:30'], snoozedUntil: null }]
+    const { store, host, f } = setup(two)
+    const log = vi.fn()
+    Object.assign(host, { log })
+    f.seed('snaps_prompts', { '2026-10-01@08:15': { person: 'ana' } })
+    expect(await store.sendDuePrompts(AT)).toEqual(['2026-10-01@08:30'])
+    expect(log).not.toHaveBeenCalled()
+    // a transient failure is reported and the run carries on
+    const { store: s2, nudge: n2, host: h2 } = setup(two)
+    const log2 = vi.fn()
+    Object.assign(h2, { log: log2 })
+    const real = h2.db()
+    const flaky = { ...real, collection: (name: string) => {
+      const c = real.collection(name)
+      return { ...c, doc: (id?: string) => {
+        const d = c.doc(id)
+        return id === '2026-10-01@08:15' ? { ...d, create: async () => { throw Object.assign(new Error('unavailable'), { code: 14 }) } } : d
+      } }
+    } }
+    Object.assign(h2, { db: () => flaky })
+    expect(await s2.sendDuePrompts(AT)).toEqual(['2026-10-01@08:30'])
+    expect(log2).toHaveBeenCalledWith('prompts.claim failed', expect.objectContaining({ code: 14 }))
+    expect(n2).toHaveBeenCalledTimes(1)
+  })
+  it('skips and reports a person whose times are invalid, and still runs the rest', async () => {
+    const { store, nudge, host } = setup([
+      { key: 'ana', times: ['23:30', '08:30'], snoozedUntil: null },
+      { key: 'ben', times: ['08:30'], snoozedUntil: null },
+    ])
+    const log = vi.fn()
+    Object.assign(host, { log })
+    expect(await store.sendDuePrompts(AT)).toEqual(['2026-10-01@08:30'])
+    expect(nudge).toHaveBeenCalledWith('ben', '2026-10-01@08:30')
+    expect(log).toHaveBeenCalledWith('prompts.times invalid', expect.objectContaining({ person: 'ana' }))
+  })
   it('refuses where reminders are off', async () => {
     const store = createCowitnessStore(fakeHost().host)
     await expect(store.sendDuePrompts(AT)).rejects.toMatchObject({ status: 404 })
@@ -73,6 +109,11 @@ describe("a person's own times", () => {
     const res = await h.prompts.PATCH(new Request('https://x', { method: 'PATCH', body: JSON.stringify({ times: ['23:30'] }) }))
     expect(res.status).toBe(400)
     expect(await res.text()).toMatch(/23:00 or earlier/)
+  })
+  it('reading is refused to anyone who is not reminded', async () => {
+    const { h, host } = setup()
+    vi.mocked(host.member).mockResolvedValue('ben')
+    expect((await h.prompts.GET(new Request('https://x'))).status).toBe(403)
   })
   it('is refused to anyone who is not reminded', async () => {
     const { h, host } = setup()

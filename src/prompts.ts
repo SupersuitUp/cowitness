@@ -25,6 +25,10 @@ export const PROMPT_TIMES_MAX = 6
 export const PROMPT_TIME_LATEST = '23:00'
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
 
+// The same rule the patch applies, for times a host hands back.
+export const validPromptTimes = (times: unknown): times is string[] =>
+  Array.isArray(times) && times.length <= PROMPT_TIMES_MAX && times.every((t) => typeof t === 'string' && HHMM.test(t) && t <= PROMPT_TIME_LATEST)
+
 // A person's own reminder times, and "not today". `today` is the day in the reminders' time zone.
 // A slot stays due for an hour and the window does not wrap midnight, so a time after 23:00 could
 // run out of window before the day ends: those are refused.
