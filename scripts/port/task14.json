@@ -1,0 +1,305 @@
+{
+  "commit": "7e65c60a9cff94c5831978cdf36c73912de6ee7b",
+  "maps": {
+    "client": {
+      "@/lib/us/members": "../types.js",
+      "@/lib/us/types": "../types.js",
+      "@/lib/us/rules": "../shared-rules.js",
+      "@/lib/us/snap-rules": "../snap-rules.js",
+      "@/lib/us/exif-date": "../../test/support/exif-date.js",
+      "../theme": "./theme.js",
+      "./upload-queue": "./upload.js",
+      "./video-upload": "./upload.js",
+      "./notes-format": "./group-by-day.js",
+      "./photo-view": "./format-duration.js",
+      "./thread": "./format-when.js",
+      "./cowitness-format": "../format.js",
+      "./streak": "../streak.js"
+    },
+    "support": {}
+  },
+  "renames": {
+    "NOTE_MAX": "MESSAGE_MAX"
+  },
+  "urls": [
+    [
+      "`/api/us/snaps",
+      "`${clientConfig().apiBase}"
+    ],
+    [
+      "'/api/us/snaps/photo'",
+      "`${clientConfig().apiBase}/photo`"
+    ],
+    [
+      "'/api/us/snaps/video'",
+      "`${clientConfig().apiBase}/video`"
+    ],
+    [
+      "'/api/us/photos/upload-url'",
+      "clientConfig().uploadUrls.photo"
+    ],
+    [
+      "router.push('/cowitness')",
+      "router.push(clientConfig().pageBase)"
+    ],
+    [
+      "href=\"/cowitness/witnessed\"",
+      "href={`${clientConfig().pageBase}/witnessed`}"
+    ],
+    [
+      "`/cowitness/",
+      "`${clientConfig().pageBase}/"
+    ]
+  ],
+  "configImport": "import { clientConfig } from './config.js'",
+  "files": [
+    {
+      "from": "src/app/components/bottom-sheet.tsx",
+      "to": "src/client/bottom-sheet.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/photo-input.tsx",
+      "to": "src/client/photo-input.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/picked-preview.tsx",
+      "to": "src/client/picked-preview.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/video-mark.tsx",
+      "to": "src/client/video-mark.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "// INK at 90%: the tile a video shows when there is no poster frame to draw.\nexport const NO_POSTER_BG = `${INK}e6`",
+          "// INK at 90%: the tile a video shows when there is no poster frame to draw.\n// A function, because INK is the app's and is only known once the app has set it.\nexport const noPosterBg = () => `${INK}e6`"
+        ],
+        [
+          "style={{ backgroundColor: NO_POSTER_BG }}",
+          "style={{ backgroundColor: noPosterBg() }}"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/section-label.tsx",
+      "to": "src/client/section-label.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/section-label.test.tsx",
+      "to": "src/client/section-label.test.tsx",
+      "map": "client",
+      "renames": true,
+      "replace": [
+        [
+          "['components/section-label.tsx']",
+          "['client/section-label.tsx']"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/snap-camera.tsx",
+      "to": "src/client/snap-camera.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "fall back to the photos she already has",
+          "fall back to the photos already on the device"
+        ],
+        [
+          "be one she took herself",
+          "be one the person took themselves"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/snap-camera.test.tsx",
+      "to": "src/client/snap-camera.test.tsx",
+      "map": "client",
+      "renames": true,
+      "replace": [
+        [
+          "while she is still deciding",
+          "while the person is still deciding"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/add-snap.tsx",
+      "to": "src/client/add-snap.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/add-snap.test.tsx",
+      "to": "src/client/add-snap.test.tsx",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/streak-strip.tsx",
+      "to": "src/client/streak-strip.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "import { otherOf } from '@/lib/us/pair'",
+          "import { otherIn } from './people.js'"
+        ],
+        [
+          "const s = streaksOf(rows, now)",
+          "const s = streaksOf(rows, now, Object.keys(names))"
+        ],
+        [
+          "const other: Member = otherOf(me)",
+          "const other: Member = otherIn(names, me)"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/streak-strip.test.tsx",
+      "to": "src/client/streak-strip.test.tsx",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/snaps-archive.tsx",
+      "to": "src/client/snaps-archive.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/snaps-archive.test.tsx",
+      "to": "src/client/snaps-archive.test.tsx",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/witness-session.tsx",
+      "to": "src/client/witness-session.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "import { NO_POSTER_BG } from './video-mark.js'",
+          "import { noPosterBg } from './video-mark.js'"
+        ],
+        [
+          "snap.posterUrl ? undefined : NO_POSTER_BG",
+          "snap.posterUrl ? undefined : noPosterBg()"
+        ],
+        [
+          "after she has started typing",
+          "after the reader has started typing"
+        ],
+        [
+          "// She was already typing while the phone asked: keep her words",
+          "// The reader was already typing while the phone asked: keep their words"
+        ],
+        [
+          "witnessed with her words",
+          "witnessed with their words"
+        ],
+        [
+          "asking for the microphone she\n  // can already type",
+          "asking for the microphone the\n  // reader can already type"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/witness-session.test.tsx",
+      "to": "src/client/witness-session.test.tsx",
+      "map": "client",
+      "renames": true,
+      "replace": [
+        [
+          "re:// Ana, \\d{4}-\\d\\d-\\d\\d: \"[^\"]*\" Typed words are the\\n",
+          "// Typed words are the\n"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/snap-detail.tsx",
+      "to": "src/client/snap-detail.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "import { Thread, formatWhen } from './format-when.js'",
+          "import { formatWhen } from './format-when.js'"
+        ],
+        [
+          "import { NO_POSTER_BG } from './video-mark.js'",
+          "import { noPosterBg } from './video-mark.js'"
+        ],
+        [
+          "import { otherOf } from '@/lib/us/pair'",
+          "import { otherIn } from './people.js'"
+        ],
+        [
+          "names[otherOf(me)]",
+          "names[otherIn(names, me)]"
+        ],
+        [
+          "snap.posterUrl ? undefined : NO_POSTER_BG",
+          "snap.posterUrl ? undefined : noPosterBg()"
+        ],
+        [
+          "      {!hidden && (\n        <Thread\n          id={snap.id} me={me} names={names} item={{ comments }} collection=\"snaps\" onSent={(next) => commit(() => next)}\n          audioSrc={(c) => (c.recording ? `/api/us/snaps/${snap.id}/reactions/${c.id}/audio` : null)}\n          onRetranscribe={(id) => { void retranscribe(id) }}\n        />\n      )}",
+          "      {/* The conversation is the app's own, so it looks like every other conversation in it. */}\n      {!hidden && clientConfig().renderThread({\n        snapId: snap.id, me, names, comments, onSent: (next) => commit(() => next),\n        audioSrc: (c) => (c.recording ? `/api/us/snaps/${snap.id}/reactions/${c.id}/audio` : null),\n        onRetranscribe: (id) => { void retranscribe(id) },\n      })}"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/snap-detail.test.tsx",
+      "to": "src/client/snap-detail.test.tsx",
+      "map": "client",
+      "renames": true,
+      "replace": [
+        [
+          "re:\\u1230\\u120b\\u121d",
+          "bonjour"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/cowitness-home.tsx",
+      "to": "src/client/cowitness-home.tsx",
+      "map": "client",
+      "renames": true,
+      "urls": true,
+      "replace": [
+        [
+          "as soon as she is back here",
+          "as soon as the reader is back here"
+        ]
+      ]
+    },
+    {
+      "from": "src/app/components/cowitness-home.test.tsx",
+      "to": "src/client/cowitness-home.test.tsx",
+      "map": "client",
+      "renames": true
+    }
+  ]
+}

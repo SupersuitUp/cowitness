@@ -8,7 +8,10 @@ export function TestThread({ snapId, me, names, comments, onSent, audioSrc, onRe
     const res = await fetch(`/api/us/snaps/${snapId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'comment', text }),
     })
-    if (res.ok) onSent(((await res.json()) as { comments?: Comment[] }).comments ?? [])
+    if (res.ok) {
+      setText('')
+      onSent(((await res.json()) as { comments?: Comment[] }).comments ?? [])
+    }
   }
   return (
     <section aria-label="Conversation">
