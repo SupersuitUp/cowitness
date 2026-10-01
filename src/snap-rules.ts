@@ -80,7 +80,7 @@ export function thumbPathOf(s: Snap): string | null {
 export function snapHasNew(s: Snap, m: Member, lastSeenAt: string): boolean {
   if (!canSeeSnap(s, m)) return false
   const otherAt = lastMessageFromOther(s, m)
-  // "Anyone but me" assumes two people; the audience kind replaces it later.
+  // Anyone but me posted it: assumes two people; the audience kind replaces this later.
   return (s.by !== m && s.createdAt > lastSeenAt) || (otherAt !== undefined && otherAt > lastSeenAt)
 }
 
@@ -91,7 +91,7 @@ export function coverOf(snaps: Snap[], m: Member): Snap | null {
 
 // What is waiting for `m`: everyone else's snaps, not hidden, not yet witnessed, oldest
 // first, because a session walks through the day in the order it happened.
-// "Anyone but me" assumes two people; the audience kind replaces it later.
+// Everyone-but-me is the queue: assumes two people; the audience kind replaces this later.
 export function queueOf<T extends Snap>(snaps: T[], m: Member): T[] {
   return snaps.filter((s) => s.by !== m && s.hiddenAt === null && s.witnessedAt === null).sort(oldestFirst)
 }

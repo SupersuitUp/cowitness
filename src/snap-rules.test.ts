@@ -221,12 +221,12 @@ describe('a reaction\'s words', () => {
 
   it('is marked as being written down, with the language if one was chosen, and stamps when this attempt started', () => {
     expect(markTranscribing(spoken, 'c9', undefined, { now: NOW }).comments?.[0].recording).toEqual({ ...rec, status: 'transcribing', startedAt: NOW })
-    expect(markTranscribing(spoken, 'c9', 'am', { now: NOW }).comments?.[0].recording).toEqual({ ...rec, status: 'transcribing', language: 'am', startedAt: NOW })
+    expect(markTranscribing(spoken, 'c9', 'fr', { now: NOW }).comments?.[0].recording).toEqual({ ...rec, status: 'transcribing', language: 'fr', startedAt: NOW })
   })
 
   it('lands as the message text, and the state goes away', () => {
-    const done = setReactionTranscript(markTranscribing(spoken, 'c9', undefined, { now: NOW }), 'c9', '  ሰላም, you look happy  ')
-    expect(done.comments?.[0]).toMatchObject({ text: 'ሰላም, you look happy', recording: rec })
+    const done = setReactionTranscript(markTranscribing(spoken, 'c9', undefined, { now: NOW }), 'c9', '  bonjour, you look happy  ')
+    expect(done.comments?.[0]).toMatchObject({ text: 'bonjour, you look happy', recording: rec })
     expect(done.comments?.[0].recording).not.toHaveProperty('status')
     expect(done.comments?.[0].recording).not.toHaveProperty('startedAt')
     expect(hasUndefined(done)).toBe(false)
