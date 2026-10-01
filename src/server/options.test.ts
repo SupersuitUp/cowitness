@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 const { scheduled } = vi.hoisted(() => ({ scheduled: [] as Promise<unknown>[] }))
 vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/server')>()), after: (fn: () => Promise<unknown>) => { scheduled.push(fn()) } }))
-import { createCowitnessStore } from './store.js'
+import { askPeopleOnce, createCowitnessStore } from './store.js'
 import { createCowitnessHandlers } from './handlers.js'
 import { fakeHost, PHOTO, type M } from '../../test/support/fake-host.js'
 import type { CowitnessHost } from './host.js'
@@ -432,5 +432,25 @@ describe('with the options off', () => {
     for (const s of Object.values(f.all('snaps'))) {
       for (const k of ['justUs', 'tags', 'witnessedBy', 'voice']) expect(s).not.toHaveProperty(k)
     }
+  })
+})
+
+describe('one request asks who the people are once', () => {
+  it('a store made with askPeopleOnce reads people() once however many calls the page makes, and the next request asks again', async () => {
+    const { host, people } = setup()
+    const page = async () => {
+      const store = createCowitnessStore(askPeopleOnce(host))
+      await store.whoAmI('cy')
+      await store.listCowitness('cy')
+      await store.cowitnessSummary('cy', '2000-01-01T00:00:00.000Z')
+    }
+    await page()
+    expect(people).toHaveBeenCalledTimes(1)
+    await page()
+    expect(people).toHaveBeenCalledTimes(2)
+  })
+  it('a host with no people is handed back as it is', () => {
+    const { host } = fakeHost()
+    expect(askPeopleOnce(host)).toBe(host)
   })
 })

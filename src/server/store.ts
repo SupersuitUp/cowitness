@@ -51,6 +51,17 @@ export function assertHostFits<M extends string>(host: CowitnessHost<M>, f: Cowi
   if (missing.length) throw new Error(`cowitness: the host turned on options without ${missing.join(', ')}`)
 }
 
+// A page drawn from several store calls (what this person may do, the home, the tile) would ask the
+// app who its people are once per call. Make the request's store from this host instead and it asks
+// once for the whole request; make a new one for the next request, so a change in who is who shows.
+// A host with no people() is handed back as it is.
+export function askPeopleOnce<M extends string>(host: CowitnessHost<M>): CowitnessHost<M> {
+  if (typeof host.people !== 'function') return host
+  const ask = host.people.bind(host)
+  let asked: ReturnType<typeof ask> | undefined
+  return { ...host, people: () => (asked ??= ask()) }
+}
+
 export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   const features = resolveFeatures(host.features)
   assertHostFits(host, features)
