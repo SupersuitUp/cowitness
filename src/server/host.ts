@@ -64,6 +64,12 @@ export interface CowitnessHost<M extends string> {
    * The four moments. The app decides what each becomes; Cowitness never sends a push itself. Each
    * is called after the write is saved; a throw or a rejected promise goes to `log` and never
    * changes the route's answer.
+   *
+   * Every one is handed the snap, and a "just us" snap carries `justUs: true`. Before telling anyone,
+   * the app MUST check each recipient with `mayHear(snap, person, circleOf(witnessing, people))`
+   * (both exported from the package root); with no circle a "just us" snap may be told to its
+   * author only. "Tell everyone but the actor" would put a private moment on a lock screen that
+   * every route refuses to show.
    */
   announce: {
     shared(m: M, s: Snap<M>): void

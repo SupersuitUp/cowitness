@@ -18,6 +18,8 @@ type ReactionParams = { params: Promise<{ id: string; commentId: string }> }
 // files of the app it was built in (see scripts/port/task12.json). Each route file still declares its own segment
 // config (`runtime = 'nodejs'`, and `maxDuration = 300` on the two that transcribe), because Next.js
 // reads those from the route file itself.
+// A stand-in `store` (a test double) should call patchSnap's `before` with the snap as read: without
+// it a tag patch is treated as tagging an untagged snap, and announced every time.
 export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>, store: CowitnessStore<M> = createCowitnessStore(host)) {
   // The options are the store's, so routes paired with a prebuilt store answer as that store does.
   // A stand-in store that carries none runs with every option off.

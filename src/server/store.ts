@@ -69,8 +69,11 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   const maxTags = host.tags?.max ?? TAGS_MAX_DEFAULT
   // What a filing carries beyond its media, checked before the app's pipeline is touched.
   async function filingExtras(m: M, input: { justUs?: unknown; tags?: unknown }): Promise<{ justUs?: true; tags?: string[] }> {
-    assertCanShare(m, await circle())
+    const ctx = await circle()
+    assertCanShare(m, ctx)
     const justUs = validateJustUs(input.justUs, features.justUs)
+    // Someone who does not share would file a snap even they could not be counted among; refused instead.
+    if (justUs && ctx && !ctx.sharers.has(m)) throw new RuleError('only someone who shares can mark a snap "just us"', 400)
     const tags = input.tags === undefined ? undefined : validateTags(input.tags, await tagSet(), maxTags)
     return { ...(justUs ? { justUs } : {}), ...(tags ? { tags } : {}) }
   }
@@ -214,7 +217,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     let created = false
     const snap = await rewrite(snapId, (s) => {
       // A snap kept from this person answers like one that does not exist; one hidden from them keeps its old answer.
-      if (canSeeSnap(s, m) && !canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
+      if ((s.hiddenAt === null || s.by === m) && !canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
       created = !(s.comments ?? []).some((c) => c.id === commentId)
       return addVoiceReaction(s, m, commentId, rec, { now: nowIso(), ctx }) as Snap<M>
     })

@@ -4,9 +4,11 @@ const { scheduled } = vi.hoisted(() => ({ scheduled: [] as Promise<unknown>[] })
 vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/server')>()), after: (fn: () => Promise<unknown>) => { scheduled.push(fn()) } }))
 import { createCowitnessStore } from './store.js'
 import { createCowitnessHandlers } from './handlers.js'
-import { fakeHost, type M } from '../../test/support/fake-host.js'
+import { fakeHost, PHOTO, type M } from '../../test/support/fake-host.js'
 import type { CowitnessHost } from './host.js'
-import type { Person } from '../features.js'
+import { circleOf, type Person } from '../features.js'
+import { mayHear } from '../snap-rules.js'
+import type { Snap } from '../types.js'
 
 const SHARERS_AND_A_WITNESS: Person<M>[] = [{ key: 'ana', role: 'shares' }, { key: 'ben', role: 'shares' }, { key: 'cy', role: 'witnesses' }]
 
@@ -214,7 +216,7 @@ describe('witnessing per person', () => {
 })
 
 // Every way a list, a cover, a count or a single snap can reach a person, for a person who only witnesses.
-async function nothingReaches(s: ReturnType<typeof setup>) {
+async function nothingReaches(s: Pick<ReturnType<typeof setup>, 'host' | 'store' | 'routes'>) {
   const { host, store, routes } = s
   const home = await store.listCowitness('cy')
   expect(home.rows).toEqual([])
@@ -272,6 +274,82 @@ describe('"just us" never reaches a person who only witnesses', () => {
     s.b.put('p/snaps-audio/p1/r-leak0001.m4a', Buffer.from('abcd'), 'audio/mp4')
     s.b.put('p/snaps-audio/p1/r-ana00001.m4a', Buffer.from('abcd'), 'audio/mp4')
     await nothingReaches(s)
+  })
+})
+
+describe('every announcement of a "just us" snap carries what the host filters by', () => {
+  it('shared, tagged, witnessed, message, heart and spoken are each handed the snap with justUs, and mayHear says no to a witness', async () => {
+    const { host, routes, b, tagged, spoken } = setup(undefined, [{ key: 'ana', role: 'shares' }, { key: 'ben', role: 'both' }, { key: 'cy', role: 'witnesses' }])
+    const circle = circleOf('audience', [{ key: 'ana', role: 'shares' }, { key: 'ben', role: 'both' }, { key: 'cy', role: 'witnesses' }])
+    as(host, 'ana')
+    await routes.photo.POST(post({ photoId: 'p1', justUs: true, tags: ['t-first'] }))
+    await routes.snap.PATCH(patch({ kind: 'tag', ids: ['t-second'] }), id('p1'))
+    as(host, 'ben')
+    await routes.snap.PATCH(patch({ kind: 'witness' }), id('p1'))
+    await routes.snap.PATCH(patch({ kind: 'comment', text: 'ours' }), id('p1'))
+    b.put('p/snaps-audio/p1/r-ben00001.m4a', Buffer.from('abcd'), 'audio/mp4')
+    await routes.reactions.POST(post({ commentId: 'r-ben00001', contentType: 'audio/mp4', durationSec: 2 }), id('p1'))
+    await Promise.all(scheduled)
+    as(host, 'ana')
+    const commentId = (await (await routes.snap.GET(get(), id('p1'))).json()).comments[0].id
+    await routes.snap.PATCH(patch({ kind: 'comment-heart', commentId, value: true }), id('p1'))
+    const snapsHanded = [
+      vi.mocked(host.announce.shared).mock.calls, tagged.mock.calls, vi.mocked(host.announce.witnessed).mock.calls,
+      vi.mocked(host.announce.message).mock.calls, vi.mocked(host.announce.heart).mock.calls, spoken.mock.calls,
+    ].map((calls) => calls.map((c) => c[1] as Snap<M>))
+    expect(snapsHanded.map((x) => x.length)).toEqual([1, 2, 1, 1, 1, 1])
+    for (const snap of snapsHanded.flat()) {
+      expect(snap.justUs).toBe(true)
+      expect((['ana', 'ben', 'cy'] as M[]).map((m) => mayHear(snap, m, circle))).toEqual([true, true, false])
+    }
+  })
+})
+
+describe('"just us" after the option is turned off', () => {
+  // The records stay as they were written; only the app's options changed.
+  it('stays private to its author: no list, shelf, cover, count, new mark, single snap, reaction or announcement reaches anyone else', async () => {
+    const { host, f, b } = fakeHost()
+    f.seed('snaps', {
+      p1: { by: 'ana', caption: '', kind: 'photo', takenAt: 'x', width: 1, height: 1, paths: PHOTO.paths, witnessedAt: '2026-09-30T10:00:00.000Z', hiddenAt: null, createdAt: '2026-09-30T09:00:00.000Z', justUs: true },
+    })
+    b.put('p/snaps-audio/p1/r-leak0001.m4a', Buffer.from('abcd'), 'audio/mp4')
+    const store = createCowitnessStore(host)
+    const routes = createCowitnessHandlers(host, store)
+    await nothingReaches({ host, store, routes })
+    for (const m of ['ben'] as M[]) {
+      expect(await store.listSnaps(m)).toEqual([])
+      expect(await store.cowitnessSummary(m, '2000-01-01T00:00:00.000Z')).toEqual({ count: 0, coverUrl: null, hasNew: false, waiting: 0 })
+    }
+    expect((await store.listSnaps('ana')).map((x) => x.id)).toEqual(['p1'])
+    // The author's own comment is announced with the flag, and with no circle mayHear names only the author.
+    as(host, 'ana')
+    expect((await routes.snap.PATCH(patch({ kind: 'comment', text: 'still ours' }), id('p1'))).status).toBe(200)
+    const snap = vi.mocked(host.announce.message).mock.calls[0][1]
+    expect(snap.justUs).toBe(true)
+    expect((['ana', 'ben', 'cy'] as M[]).map((m) => mayHear(snap, m))).toEqual([true, false, false])
+  })
+})
+
+describe('the author of a "just us" snap', () => {
+  it('can file one only when they share: someone who does not is refused, not handed a snap they cannot see', async () => {
+    const { host, routes, f } = setup({ justUs: true })
+    as(host, 'cy')
+    const res = await routes.photo.POST(post({ photoId: 'p1', justUs: true }))
+    expect(res.status).toBe(400)
+    expect(f.raw('snaps', 'p1')).toBeUndefined()
+    expect(host.media.filePhoto).not.toHaveBeenCalled()
+    expect((await routes.photo.POST(post({ photoId: 'p2' }))).status).toBe(200)
+  })
+  it('always sees it and can turn the flag off, even after the circle stops counting them as sharing', async () => {
+    const { host, routes, store, f } = setup({ justUs: true })
+    f.seed('snaps', {
+      p1: { by: 'cy', caption: '', kind: 'photo', takenAt: 'x', width: 1, height: 1, paths: PHOTO.paths, witnessedAt: null, hiddenAt: null, createdAt: '2026-09-30T09:00:00.000Z', justUs: true },
+    })
+    expect((await store.getSnapView('cy', 'p1'))?.id).toBe('p1')
+    expect((await store.listSnaps('cy')).map((x) => x.id)).toEqual(['p1'])
+    as(host, 'cy')
+    expect((await routes.snap.PATCH(patch({ kind: 'just-us', value: false }), id('p1'))).status).toBe(200)
+    expect(f.raw('snaps', 'p1')).not.toHaveProperty('justUs')
   })
 })
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { circleOf } from './features.js'
 import { announcementOf } from './announce.js'
 import {
-  applySnapPatch, archiveOf, assertCanShare, canSeeSnap, cowitnessTile, openOf, queueOf, seenBy, witnessedOf,
+  applySnapPatch, archiveOf, assertCanShare, canSeeSnap, coverOf, cowitnessTile, mayHear, openOf, queueOf, seenBy, snapHasNew, witnessedOf,
 } from './snap-rules.js'
 import type { Snap } from './types.js'
 
@@ -22,8 +22,30 @@ describe('"just us"', () => {
     expect(archiveOf([secret, s('s2', 'ana')], 'cy', AUD).map((x) => x.id)).toEqual(['s2'])
     expect(queueOf([secret], 'cy', AUD)).toEqual([])
   })
-  it('means nothing to a rule given no circle, exactly as before options existed', () => {
-    expect(canSeeSnap(s('s1', 'ana', { justUs: true }), 'cy')).toBe(true)
+  it('stays private to its author when a rule is given no circle (the option was turned off), on every read', () => {
+    const secret = s('s1', 'ana', { justUs: true, witnessedAt: NOW })
+    for (const m of ['ben', 'cy']) {
+      expect(canSeeSnap(secret, m)).toBe(false)
+      expect(archiveOf([secret], m)).toEqual([])
+      expect(openOf([secret], m)).toEqual([])
+      expect(witnessedOf([secret], m)).toEqual([])
+      expect(queueOf([s('s2', 'ana', { justUs: true })], m)).toEqual([])
+      expect(coverOf([secret], m)).toBeNull()
+      expect(snapHasNew(secret, m, '2000-01-01T00:00:00.000Z')).toBe(false)
+      expect(cowitnessTile([secret], m, '2000-01-01T00:00:00.000Z', null)).toEqual({ count: 0, coverUrl: null, hasNew: false, waiting: 0 })
+    }
+    expect(canSeeSnap(secret, 'ana')).toBe(true)
+  })
+  it('is always seen by its author, even one the circle no longer counts as sharing', () => {
+    expect(canSeeSnap(s('s1', 'cy', { justUs: true }), 'cy', AUD)).toBe(true)
+    expect(applySnapPatch(s('s1', 'cy', { justUs: true }), 'cy', { kind: 'just-us', value: false }, { now: NOW, ctx: AUD, justUs: true })).not.toHaveProperty('justUs')
+  })
+  it('is a snap a host may announce only to the people who share, and with no circle only to its author', () => {
+    const secret = s('s1', 'ana', { justUs: true })
+    expect(['ana', 'ben', 'cy'].map((m) => mayHear(secret, m, AUD))).toEqual([true, true, false])
+    expect(['ana', 'ben', 'cy'].map((m) => mayHear(secret, m))).toEqual([true, false, false])
+    expect(['ana', 'ben', 'cy'].map((m) => mayHear(s('s2', 'ana'), m))).toEqual([true, true, true])
+    expect(['ana', 'ben', 'cy'].map((m) => mayHear(s('s3', 'ana', { hiddenAt: NOW }), m, AUD))).toEqual([true, false, false])
   })
   it('refuses a witness who cannot see it, as though it did not exist', () => {
     expect(() => applySnapPatch(s('s1', 'ana', { justUs: true }), 'cy', { kind: 'witness' }, { now: NOW, ctx: AUD })).toThrow(/hidden/)

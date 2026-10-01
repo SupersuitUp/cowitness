@@ -19,9 +19,18 @@ export function validateCaption(v: unknown): string {
 }
 
 // The `ctx` a rule is given says who shares and who witnesses. With none, every rule is exactly
-// the rule from before options existed.
+// the rule from before options existed, for every record written before options existed.
+// A "just us" snap is seen by the people who share and always by its author. With no circle to
+// say who shares (the option was turned off after it was written) it stays its author's alone:
+// the flag fails closed, never open.
 export const canSeeSnap = (s: Pick<Snap, 'by' | 'hiddenAt' | 'justUs'>, m: Member, ctx?: Circle) =>
-  (s.hiddenAt === null || s.by === m) && !(ctx && s.justUs === true && !ctx.sharers.has(m))
+  (s.hiddenAt === null || s.by === m) && (s.justUs !== true || s.by === m || (ctx !== undefined && ctx.sharers.has(m)))
+
+// Whether a host may tell `m` about this snap. Every announcement hands the host the snap, whose
+// `justUs` is the signal; a host MUST check each recipient with this before telling them anything,
+// passing the same circle the package builds (`circleOf(witnessing, people)`). With no circle a
+// "just us" snap may be announced to its author only.
+export const mayHear = (s: Pick<Snap, 'by' | 'hiddenAt' | 'justUs'>, m: Member, ctx?: Circle): boolean => canSeeSnap(s, m, ctx)
 
 // Whether `m` has seen this snap. In the audience kind a witness has their own seen; the person who
 // shared it, and anyone who only shares, read the first one as the receipt.
@@ -140,7 +149,7 @@ export function queueOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle): T[
     if (!ctx.witnesses.has(m)) return []
     return snaps.filter((s) => s.by !== m && s.hiddenAt === null && canSeeSnap(s, m, ctx) && s.witnessedBy?.[m] === undefined).sort(oldestFirst)
   }
-  return snaps.filter((s) => s.by !== m && s.hiddenAt === null && s.witnessedAt === null && (!ctx || canSeeSnap(s, m, ctx))).sort(oldestFirst)
+  return snaps.filter((s) => s.by !== m && s.hiddenAt === null && s.witnessedAt === null && canSeeSnap(s, m, ctx)).sort(oldestFirst)
 }
 
 export function cowitnessTile(snaps: Snap[], m: Member, lastSeenAt: string, coverUrl: string | null, ctx?: Circle): CowitnessSummary {
