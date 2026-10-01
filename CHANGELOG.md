@@ -2,6 +2,12 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.1.3 (2026-10-01)
+
+- A host's `commentImages.attach` that throws after a comment was saved no longer answers 500 (which
+  made the phone send the comment again). The failure goes to `host.log('commentImages.attach
+  failed', err)`, or is dropped, and the message is still announced.
+
 ## 0.1.2 (2026-10-01)
 
 - The phone's resend no longer depends on one app's refusal wording. On a retried Send, any 400,

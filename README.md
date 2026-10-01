@@ -54,8 +54,8 @@ its JSDoc. In short:
   whatever status it carries. A refusal answers with its `status` when that is 400-499, and 403
   when it has none; any other status is treated as an internal error (logged, opaque 500).
 - Optional `log(message, err)`: where failures the person must not see are reported, such as an
-  `announce` call that throws after its snap or comment was saved. That failure never changes the
-  route's answer; without `log` it is dropped.
+  `announce` call or a `commentImages.attach` that throws after its snap or comment was saved. That
+  failure never changes the route's answer; without `log` it is dropped.
 
 ### What the host is responsible for
 

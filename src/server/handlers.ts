@@ -81,7 +81,12 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         const patch = host.commentImages ? await host.commentImages.claim(m, parsed) : parsed
         const now = new Date().toISOString()
         const snap = await store.patchSnap(m, id, patch, { now })
-        if (host.commentImages) await host.commentImages.attach(patch, { collection: 'snaps', id }, snap.comments)
+        // The comment is saved. Attaching its pictures is the app's bookkeeping, and a failure there
+        // must not turn a saved comment into an error: the phone would send it again.
+        if (host.commentImages) {
+          try { await host.commentImages.attach(patch, { collection: 'snaps', id }, snap.comments) }
+          catch (err) { try { host.log?.('commentImages.attach failed', err) } catch { /* a log that throws is dropped too */ } }
+        }
         tell(m, snap, patch, now)
         return Response.json(snap)
       }),

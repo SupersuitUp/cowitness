@@ -348,3 +348,31 @@ describe('an announcement that fails after the write is saved', () => {
     expect(log).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ message: 'push service down' }))
   })
 })
+
+describe('a picture-bookkeeping failure after a saved comment', () => {
+  beforeEach(() => { vi.clearAllMocks(); requireMember.mockResolvedValue('ben') })
+
+  it('still answers 200 with the snap, tells the host log, and still announces the message', async () => {
+    const log = vi.fn()
+    const failingImages = {
+      claim: vi.fn(async (_m: M, p: unknown) => p),
+      attach: vi.fn(async () => { throw new Error('pictures store down') }),
+    }
+    const h3 = createCowitnessHandlers({ ...host, log, commentImages: failingImages } as unknown as CowitnessHost<M>, store as unknown as CowitnessStore<M>)
+    requireMember.mockResolvedValue('ben')
+    mocked.patchSnap.mockResolvedValue({ id: 's1', by: 'ana', comments: [{ id: 'c1', by: 'ben', text: 'lovely', at: 'x' }] } as never)
+    const res = await h3.snap.PATCH(json('PATCH', { kind: 'comment', text: 'lovely' }), { params: Promise.resolve({ id: 's1' }) })
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ id: 's1' })
+    expect(log).toHaveBeenCalledWith('commentImages.attach failed', expect.objectContaining({ message: 'pictures store down' }))
+    expect(announce.message).toHaveBeenCalledTimes(1)
+  })
+
+  it('with no host log the failure is dropped and the answer is still 200', async () => {
+    const failingImages = { claim: vi.fn(async (_m: M, p: unknown) => p), attach: vi.fn(async () => { throw new Error('down') }) }
+    const h4 = createCowitnessHandlers({ ...host, commentImages: failingImages } as unknown as CowitnessHost<M>, store as unknown as CowitnessStore<M>)
+    requireMember.mockResolvedValue('ben')
+    mocked.patchSnap.mockResolvedValue({ id: 's1', by: 'ana', comments: [{ id: 'c1', by: 'ben', text: 'x', at: 'x' }] } as never)
+    expect((await h4.snap.PATCH(json('PATCH', { kind: 'comment', text: 'x' }), { params: Promise.resolve({ id: 's1' }) })).status).toBe(200)
+  })
+})
