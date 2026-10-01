@@ -1,0 +1,2273 @@
+{
+  "log": [
+    {
+      "answer": {
+        "body": {
+          "error": "private"
+        },
+        "status": 403
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "a stranger lists",
+      "stored": {}
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [
+            [
+              "ana",
+              {
+                "by": "ana",
+                "caption": "morning",
+                "createdAt": "2026-09-30T12:02:00.000Z",
+                "height": 4032,
+                "hiddenAt": null,
+                "id": "g1",
+                "kind": "photo",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "width": 3024,
+                "witnessedAt": null
+              }
+            ]
+          ],
+          "witnessed": []
+        },
+        "filePhoto": [
+          [
+            "ana",
+            "g1",
+            null
+          ]
+        ],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana files a photo",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [
+            [
+              "ben",
+              {
+                "by": "ben",
+                "caption": "",
+                "createdAt": "2026-09-30T12:03:00.000Z",
+                "height": 1280,
+                "hiddenAt": null,
+                "id": "g2",
+                "kind": "video",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "video": {
+                  "contentType": "video/mp4",
+                  "durationSec": 4,
+                  "path": "p/video/x.mp4",
+                  "posterPath": null
+                },
+                "width": 720,
+                "witnessedAt": null
+              }
+            ]
+          ],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [
+          [
+            "ben",
+            "g2",
+            {
+              "durationSec": 4,
+              "height": 1280,
+              "takenAt": "2026-09-30T07:00:00",
+              "width": 720
+            }
+          ]
+        ],
+        "transcribe": []
+      },
+      "name": "ben files a video",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "error": "caption must be at most 500 characters"
+        },
+        "status": 400
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben files a caption over the cap",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": [
+          {
+            "by": "ben",
+            "caption": "",
+            "createdAt": "2026-09-30T12:03:00.000Z",
+            "displayUrl": "signed:p/display/x.jpg",
+            "height": 1280,
+            "hiddenAt": null,
+            "id": "g2",
+            "kind": "video",
+            "paths": {
+              "display": "p/display/x.jpg",
+              "original": "p/original/x.jpg",
+              "thumb": "p/thumb/x.jpg"
+            },
+            "takenAt": "2026-09-27T14:03:00",
+            "thumbUrl": "signed:p/thumb/x.jpg",
+            "video": {
+              "contentType": "video/mp4",
+              "durationSec": 4,
+              "path": "p/video/x.mp4",
+              "posterPath": null
+            },
+            "width": 720,
+            "witnessedAt": null
+          },
+          {
+            "by": "ana",
+            "caption": "morning",
+            "createdAt": "2026-09-30T12:02:00.000Z",
+            "displayUrl": "signed:p/display/x.jpg",
+            "height": 4032,
+            "hiddenAt": null,
+            "id": "g1",
+            "kind": "photo",
+            "paths": {
+              "display": "p/display/x.jpg",
+              "original": "p/original/x.jpg",
+              "thumb": "p/thumb/x.jpg"
+            },
+            "takenAt": "2026-09-27T14:03:00",
+            "thumbUrl": "signed:p/thumb/x.jpg",
+            "width": 3024,
+            "witnessedAt": null
+          }
+        ],
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana lists",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "displayUrl": "signed:p/display/x.jpg",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "thumbUrl": "signed:p/thumb/x.jpg",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana reads g2",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [
+            [
+              "ana",
+              {
+                "by": "ben",
+                "caption": "",
+                "comments": [
+                  {
+                    "at": "2026-09-30T12:07:00.000Z",
+                    "by": "ana",
+                    "id": "c-muo28eqo-4fzzzx",
+                    "text": "hi"
+                  }
+                ],
+                "createdAt": "2026-09-30T12:03:00.000Z",
+                "height": 1280,
+                "hiddenAt": null,
+                "id": "g2",
+                "kind": "video",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "video": {
+                  "contentType": "video/mp4",
+                  "durationSec": 4,
+                  "path": "p/video/x.mp4",
+                  "posterPath": null
+                },
+                "width": 720,
+                "witnessedAt": null
+              },
+              {
+                "at": "2026-09-30T12:07:00.000Z",
+                "by": "ana",
+                "id": "c-muo28eqo-4fzzzx",
+                "text": "hi"
+              }
+            ]
+          ],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana writes under g2",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [
+            [
+              "ben",
+              {
+                "by": "ben",
+                "caption": "",
+                "comments": [
+                  {
+                    "at": "2026-09-30T12:07:00.000Z",
+                    "by": "ana",
+                    "hearts": {
+                      "ben": "2026-09-30T12:08:00.000Z"
+                    },
+                    "id": "c-muo28eqo-4fzzzx",
+                    "text": "hi"
+                  }
+                ],
+                "createdAt": "2026-09-30T12:03:00.000Z",
+                "height": 1280,
+                "hiddenAt": null,
+                "id": "g2",
+                "kind": "video",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "video": {
+                  "contentType": "video/mp4",
+                  "durationSec": 4,
+                  "path": "p/video/x.mp4",
+                  "posterPath": null
+                },
+                "width": 720,
+                "witnessedAt": null
+              },
+              {
+                "at": "2026-09-30T12:07:00.000Z",
+                "by": "ana",
+                "hearts": {
+                  "ben": "2026-09-30T12:08:00.000Z"
+                },
+                "id": "c-muo28eqo-4fzzzx",
+                "text": "hi"
+              }
+            ]
+          ],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben hearts it",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben hearts it again",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": null
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "id": "g2",
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": [
+            [
+              "ana",
+              {
+                "by": "ben",
+                "caption": "",
+                "comments": [
+                  {
+                    "at": "2026-09-30T12:07:00.000Z",
+                    "by": "ana",
+                    "hearts": {
+                      "ben": "2026-09-30T12:08:00.000Z"
+                    },
+                    "id": "c-muo28eqo-4fzzzx",
+                    "text": "hi"
+                  },
+                  {
+                    "at": "2026-09-30T12:10:00.000Z",
+                    "by": "ana",
+                    "id": "c-muo2c9mo-4fzzzx",
+                    "text": "seen"
+                  }
+                ],
+                "createdAt": "2026-09-30T12:03:00.000Z",
+                "height": 1280,
+                "hiddenAt": null,
+                "id": "g2",
+                "kind": "video",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "video": {
+                  "contentType": "video/mp4",
+                  "durationSec": 4,
+                  "path": "p/video/x.mp4",
+                  "posterPath": null
+                },
+                "width": 720,
+                "witnessedAt": "2026-09-30T12:10:00.000Z"
+              },
+              "seen"
+            ]
+          ]
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana witnesses g2 with words",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "error": "you cannot witness your own snap"
+        },
+        "status": 400
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben tries to witness his own g2",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": null
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": [
+            [
+              "ben",
+              {
+                "by": "ana",
+                "caption": "morning",
+                "createdAt": "2026-09-30T12:02:00.000Z",
+                "height": 4032,
+                "hiddenAt": null,
+                "id": "g1",
+                "kind": "photo",
+                "paths": {
+                  "display": "p/display/x.jpg",
+                  "original": "p/original/x.jpg",
+                  "thumb": "p/thumb/x.jpg"
+                },
+                "takenAt": "2026-09-27T14:03:00",
+                "width": 3024,
+                "witnessedAt": "2026-09-30T12:12:00.000Z"
+              },
+              ""
+            ]
+          ]
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben witnesses g1",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": "2026-09-30T12:13:00.000Z",
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana hides g1",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": "2026-09-30T12:13:00.000Z",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "error": "not found"
+        },
+        "status": 404
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben reads hidden g1",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": "2026-09-30T12:13:00.000Z",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana brings g1 back",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "error": "unknown patch kind"
+        },
+        "status": 400
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "an unknown patch",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "commentId": "r-golden01",
+          "requiredHeaders": {
+            "Content-Type": "audio/mp4",
+            "x-goog-content-length-range": "0,41943040",
+            "x-goog-if-generation-match": "0"
+          },
+          "url": "https://signed.example/write/p/snaps-audio/g1/r-golden01.m4a"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben asks for a reaction ticket",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "path": "p/snaps-audio/g1/r-golden01.m4a",
+                "status": "transcribing"
+              },
+              "text": ""
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": [
+          [
+            4,
+            "audio/mp4",
+            {
+              "language": "auto",
+              "speaker": "ben"
+            }
+          ]
+        ]
+      },
+      "name": "ben files the reaction",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ben files it again",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "language": "fr",
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "id": "g1",
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "status": 200
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": [
+          [
+            4,
+            "audio/mp4",
+            {
+              "language": "fr",
+              "speaker": "ben"
+            }
+          ]
+        ]
+      },
+      "name": "ana transcribes it again",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "language": "fr",
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": "",
+        "location": "signed:p/snaps-audio/g1/r-golden01.m4a",
+        "status": 302
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "ana listens",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "language": "fr",
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    },
+    {
+      "answer": {
+        "body": {
+          "error": "not found"
+        },
+        "status": 404
+      },
+      "calls": {
+        "announce": {
+          "heart": [],
+          "message": [],
+          "shared": [],
+          "witnessed": []
+        },
+        "filePhoto": [],
+        "fileVideo": [],
+        "transcribe": []
+      },
+      "name": "a voice address that does not exist yet",
+      "stored": {
+        "g1": {
+          "by": "ana",
+          "caption": "morning",
+          "comments": [
+            {
+              "at": "2026-09-30T12:18:00.000Z",
+              "by": "ben",
+              "id": "r-golden01",
+              "recording": {
+                "contentType": "audio/mp4",
+                "durationSec": 3,
+                "language": "fr",
+                "path": "p/snaps-audio/g1/r-golden01.m4a"
+              },
+              "text": "hello there"
+            }
+          ],
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "height": 4032,
+          "hiddenAt": null,
+          "kind": "photo",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "width": 3024,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        },
+        "g2": {
+          "by": "ben",
+          "caption": "",
+          "comments": [
+            {
+              "at": "2026-09-30T12:07:00.000Z",
+              "by": "ana",
+              "hearts": {
+                "ben": "2026-09-30T12:08:00.000Z"
+              },
+              "id": "c-muo28eqo-4fzzzx",
+              "text": "hi"
+            },
+            {
+              "at": "2026-09-30T12:10:00.000Z",
+              "by": "ana",
+              "id": "c-muo2c9mo-4fzzzx",
+              "text": "seen"
+            }
+          ],
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "height": 1280,
+          "hiddenAt": null,
+          "kind": "video",
+          "paths": {
+            "display": "p/display/x.jpg",
+            "original": "p/original/x.jpg",
+            "thumb": "p/thumb/x.jpg"
+          },
+          "takenAt": "2026-09-27T14:03:00",
+          "video": {
+            "contentType": "video/mp4",
+            "durationSec": 4,
+            "path": "p/video/x.mp4",
+            "posterPath": null
+          },
+          "width": 720,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        }
+      }
+    }
+  ],
+  "reads": {
+    "homeAna": {
+      "queue": [],
+      "rows": [],
+      "streak": [
+        {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "durationSec": 4,
+          "hidden": false,
+          "id": "g2",
+          "kind": "video",
+          "thumbUrl": null,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        },
+        {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "durationSec": null,
+          "hidden": false,
+          "id": "g1",
+          "kind": "photo",
+          "thumbUrl": null,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        }
+      ],
+      "witnessed": 2
+    },
+    "homeBen": {
+      "queue": [],
+      "rows": [],
+      "streak": [
+        {
+          "by": "ben",
+          "caption": "",
+          "createdAt": "2026-09-30T12:03:00.000Z",
+          "durationSec": 4,
+          "hidden": false,
+          "id": "g2",
+          "kind": "video",
+          "thumbUrl": null,
+          "witnessedAt": "2026-09-30T12:10:00.000Z"
+        },
+        {
+          "by": "ana",
+          "caption": "morning",
+          "createdAt": "2026-09-30T12:02:00.000Z",
+          "durationSec": null,
+          "hidden": false,
+          "id": "g1",
+          "kind": "photo",
+          "thumbUrl": null,
+          "witnessedAt": "2026-09-30T12:12:00.000Z"
+        }
+      ],
+      "witnessed": 2
+    },
+    "queueAna": [],
+    "shelfBen": [
+      {
+        "by": "ben",
+        "caption": "",
+        "createdAt": "2026-09-30T12:03:00.000Z",
+        "durationSec": 4,
+        "hidden": false,
+        "id": "g2",
+        "kind": "video",
+        "thumbUrl": null,
+        "witnessedAt": "2026-09-30T12:10:00.000Z"
+      },
+      {
+        "by": "ana",
+        "caption": "morning",
+        "createdAt": "2026-09-30T12:02:00.000Z",
+        "durationSec": null,
+        "hidden": false,
+        "id": "g1",
+        "kind": "photo",
+        "thumbUrl": "signed:p/thumb/x.jpg",
+        "witnessedAt": "2026-09-30T12:12:00.000Z"
+      }
+    ],
+    "tileAna": {
+      "count": 2,
+      "coverUrl": "signed:p/thumb/x.jpg",
+      "hasNew": true,
+      "waiting": 0
+    },
+    "tileBen": {
+      "count": 2,
+      "coverUrl": "signed:p/thumb/x.jpg",
+      "hasNew": true,
+      "waiting": 0
+    }
+  }
+}

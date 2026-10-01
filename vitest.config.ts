@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 
+// Screens print times in the machine's zone. One zone for every run, so a golden recorded anywhere
+// matches on CI and on the publish run.
+process.env.TZ = 'UTC'
+
 export default defineConfig({
   plugins: [react()],
   test: {
