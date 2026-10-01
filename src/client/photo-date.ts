@@ -4,7 +4,7 @@
 // back out of the app could be dated the day it was uploaded.
 //
 // Reads the first EXIF segment of a JPEG: DateTimeOriginal, with OffsetTimeOriginal when present.
-// Returns an ISO-shaped string: '2026-09-15T19:42:10-05:00', or wall time '2026-09-15T19:42:10'
+// Returns an ISO-shaped string: 'YYYY-MM-DDTHH:MM:SS-05:00', or wall time 'YYYY-MM-DDTHH:MM:SS'
 // when the camera wrote no offset, or null.
 
 const HEAD_BYTES = 256 * 1024

@@ -5,7 +5,7 @@ import type { Size } from './snap-frames.js'
 //
 // Two cases, and only one needs help. With rotation lock OFF, iOS turns the page to landscape and
 // turns the camera stream with it, so the frame arrives upright and must be left alone (turning it
-// again is what put the first landscape snap back on its side, 2026-09-29; the manifest's
+// again is what put the first landscape snap back on its side; the manifest's
 // portrait lock is not honored there). With rotation lock ON, the page stays portrait, the stream
 // stays portrait with the world sideways inside it, and only the motion sensor knows. So the
 // sensor decides only while the screen itself is at 0 degrees. On iOS the sensor has to be asked

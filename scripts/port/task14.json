@@ -270,7 +270,7 @@
       "renames": true,
       "replace": [
         [
-          "re:// Ana, \\d{4}-\\d\\d-\\d\\d: \"[^\"]*\" Typed words are the\\n",
+          "re:// [A-Z][a-z]+, \\d{4}-\\d\\d-\\d\\d: \"[^\"]*\" Typed words are the\\n",
           "// Typed words are the\n"
         ]
       ]

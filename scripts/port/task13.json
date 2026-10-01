@@ -183,6 +183,10 @@
         [
           "async function shelf(mode: IDBTransactionMode): Promise<IDBObjectStore> {\n  return (await open()).transaction(SHELF, mode).objectStore(SHELF)\n}\n\nexport function indexedDbVault(): VaultStore | null {\n  if (typeof indexedDB === 'undefined') return null\n  return {\n    async get(id) { return done(await shelf('readonly').then((s) => s.get(id))) },\n    async put(rec) { await done(await shelf('readwrite').then((s) => s.put(rec))) },\n    async delete(id) { await done(await shelf('readwrite').then((s) => s.delete(id))) },\n    async all() { return done(await shelf('readonly').then((s) => s.getAll())) },\n  }\n}",
           "async function shelf(db: string, mode: IDBTransactionMode): Promise<IDBObjectStore> {\n  return (await open(db)).transaction(SHELF, mode).objectStore(SHELF)\n}\n\nexport function indexedDbVault(db: string = clientConfig().vaultName): VaultStore | null {\n  if (typeof indexedDB === 'undefined') return null\n  return {\n    async get(id) { return done(await shelf(db, 'readonly').then((s) => s.get(id))) },\n    async put(rec) { await done(await shelf(db, 'readwrite').then((s) => s.put(rec))) },\n    async delete(id) { await done(await shelf(db, 'readwrite').then((s) => s.delete(id))) },\n    async all() { return done(await shelf(db, 'readonly').then((s) => s.getAll())) },\n  }\n}"
+        ],
+        [
+          "re:Measured in production \\d{4}-\\d\\d-\\d\\d on a",
+          "Measured in production on a"
         ]
       ]
     },
@@ -276,7 +280,13 @@
       "to": "src/client/upright.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "re:, \\d{4}-\\d\\d-\\d\\d; the manifest's",
+          "; the manifest's"
+        ]
+      ]
     },
     {
       "from": "src/app/components/upright.test.ts",
@@ -285,7 +295,7 @@
       "renames": true,
       "replace": [
         [
-          "re: \\(what Ana saw on \\d{4}-\\d\\d-\\d\\d\\)",
+          "re: \\(what [A-Z][a-z]+ saw on \\d{4}-\\d\\d-\\d\\d\\)",
           ""
         ]
       ]
@@ -352,6 +362,10 @@
         [
           "saved\n// back out of Us could",
           "saved\n// back out of the app could"
+        ],
+        [
+          "re:'\\d{4}-\\d\\d-\\d\\dT19:42:10-05:00', or wall time '\\d{4}-\\d\\d-\\d\\dT19:42:10'",
+          "'YYYY-MM-DDTHH:MM:SS-05:00', or wall time 'YYYY-MM-DDTHH:MM:SS'"
         ]
       ]
     },

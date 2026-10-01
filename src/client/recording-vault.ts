@@ -75,7 +75,7 @@ export async function beginRecording(
 // EVERY time, so the record always knows its own length. A recording the page died in the
 // middle of never reaches `endRecording`, and without this it comes back as a clip of zero
 // seconds: filed, playable, and listed with no length, which reads as a rescue that half
-// worked. Measured in production 2026-09-23 on a 40-second recording that was interrupted.
+// worked. Measured in production on a 40-second recording that was interrupted.
 export function keepChunk(store: VaultStore, id: string, chunk: Blob, atSec?: number): Promise<void> {
   return inOrder(store, id, async () => {
     const rec = await store.get(id)
