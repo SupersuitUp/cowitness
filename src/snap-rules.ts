@@ -192,8 +192,8 @@ export function validateReactionClip(input: { contentType: unknown; size: unknow
 
 // A spoken reaction is a message whose words arrive later. Filed once per id: a retried attach
 // after a dropped connection must never put the same voice under the snap twice.
-export function addVoiceReaction(s: Snap, actor: Member, commentId: string, rec: Recording, opts: { now?: string } = {}): Snap {
-  if (!canSeeSnap(s, actor)) throw new RuleError('this snap is hidden', 403)
+export function addVoiceReaction(s: Snap, actor: Member, commentId: string, rec: Recording, opts: { now?: string; ctx?: Circle } = {}): Snap {
+  if (!canSeeSnap(s, actor, opts.ctx)) throw new RuleError('this snap is hidden', 403)
   if ((s.comments ?? []).some((c) => c.id === commentId)) return s
   const comment = { id: commentId, by: actor, text: '', at: opts.now ?? new Date().toISOString(), recording: rec }
   return { ...s, comments: [...(s.comments ?? []), comment] }

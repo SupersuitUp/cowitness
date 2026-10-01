@@ -2,7 +2,9 @@ import 'server-only'
 import { after } from 'next/server'
 import { announcementOf } from '../announce.js'
 import { RuleError, isRuleError } from '../errors.js'
+import { DEFAULT_FEATURES } from '../features.js'
 import { validateCommentId } from '../snap-rules.js'
+import { tagsToAnnounce } from '../tag-rules.js'
 import type { Snap, SnapPatch } from '../types.js'
 import type { CowitnessHost } from './host.js'
 import { handle as handleWith } from './http.js'
@@ -17,6 +19,9 @@ type ReactionParams = { params: Promise<{ id: string; commentId: string }> }
 // config (`runtime = 'nodejs'`, and `maxDuration = 300` on the two that transcribe), because Next.js
 // reads those from the route file itself.
 export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>, store: CowitnessStore<M> = createCowitnessStore(host)) {
+  // The options are the store's, so routes paired with a prebuilt store answer as that store does.
+  // A stand-in store that carries none runs with every option off.
+  const features = store.features ?? DEFAULT_FEATURES
   // The host's own refusals ADD to the package's: a RuleError always reaches the client with its words.
   const handle = (fn: () => Promise<Response>) => handleWith(fn, (err) => isRuleError(err) || host.isRefusal?.(err) === true)
   const signedIn = async (req?: Request): Promise<M> => {
@@ -34,12 +39,23 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
       if (r && typeof r.then === 'function') (r as Promise<unknown>).then(undefined, failed)
     } catch (err) { failed(err) }
   }
-  const tell = (m: M, snap: Snap<M>, patch: SnapPatch, now: string) => {
-    const a = announcementOf(m, snap, patch, now)
+  const tell = (m: M, snap: Snap<M>, patch: SnapPatch, now: string, before?: Snap<M>) => {
+    const a = announcementOf(m, snap, patch, now, features.witnessing)
     if (!a) return
     if (a.kind === 'message') quietly('message', () => host.announce.message(m, snap, a.comment))
     else if (a.kind === 'heart') quietly('heart', () => host.announce.heart(m, snap, a.comment))
     else if (a.kind === 'witnessed') quietly('witnessed', () => host.announce.witnessed(m, snap, a.firstWords))
+    else if (a.kind === 'tagged') {
+      // Only a change to a set that is not empty is news: the same tags again, or none, say nothing.
+      const ids = tagsToAnnounce(before ?? {}, snap)
+      if (ids && host.announce.tagged) quietly('tagged', () => host.announce.tagged!(m, snap, ids))
+    }
+  }
+  // A snap filed with tags is announced as tagged too, after it is announced as shared.
+  const filed = (m: M, snap: Snap<M>) => {
+    quietly('shared', () => host.announce.shared(m, snap))
+    const ids = snap.tags
+    if (ids?.length && host.announce.tagged) quietly('tagged', () => host.announce.tagged!(m, snap, ids))
   }
 
   return {
@@ -51,9 +67,9 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     photo: {
       POST: (req: Request) => handle(async () => {
         const m = await signedIn(req)
-        const { photoId, caption, clientTakenAt } = parseSnapPhotoBody(await req.json())
-        const snap = await store.finalizeSnapPhoto(m, photoId, { caption, clientTakenAt })
-        quietly('shared', () => host.announce.shared(m, snap))
+        const { photoId, caption, clientTakenAt, ...extra } = parseSnapPhotoBody(await req.json())
+        const snap = await store.finalizeSnapPhoto(m, photoId, { caption, clientTakenAt, ...extra })
+        filed(m, snap)
         return Response.json(snap)
       }),
     },
@@ -61,9 +77,9 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     video: {
       POST: (req: Request) => handle(async () => {
         const m = await signedIn(req)
-        const { photoId, caption, meta } = parseSnapVideoBody(await req.json())
-        const snap = await store.finalizeSnapVideo(m, photoId, { caption, meta })
-        quietly('shared', () => host.announce.shared(m, snap))
+        const { photoId, caption, meta, ...extra } = parseSnapVideoBody(await req.json())
+        const snap = await store.finalizeSnapVideo(m, photoId, { caption, meta, ...extra })
+        filed(m, snap)
         return Response.json(snap)
       }),
     },
@@ -77,17 +93,19 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
       PATCH: (req: Request, { params }: IdParams) => handle(async () => {
         const m = await signedIn(req)
         const id = (await params).id
-        const parsed = parseSnapPatch(await req.json())
+        // With an option off its patch is refused with the words it always had, before the store is touched.
+        const parsed = parseSnapPatch(await req.json(), { tags: features.tags, justUs: features.justUs })
         const patch = host.commentImages ? await host.commentImages.claim(m, parsed) : parsed
         const now = new Date().toISOString()
-        const snap = await store.patchSnap(m, id, patch, { now })
+        let before: Snap<M> | undefined
+        const snap = await store.patchSnap(m, id, patch, patch.kind === 'tag' ? { now, before: (s) => { before = s } } : { now })
         // The comment is saved. Attaching its pictures is the app's bookkeeping, and a failure there
         // must not turn a saved comment into an error: the phone would send it again.
         if (host.commentImages) {
           try { await host.commentImages.attach(patch, { collection: 'snaps', id }, snap.comments) }
           catch (err) { try { host.log?.('commentImages.attach failed', err) } catch { /* a log that throws is dropped too */ } }
         }
-        tell(m, snap, patch, now)
+        tell(m, snap, patch, now, before)
         return Response.json(snap)
       }),
     },
@@ -100,6 +118,10 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         const body = (await req.json()) as { commentId: unknown; contentType: unknown; durationSec: unknown }
         const commentId = validateCommentId(body.commentId)
         const { snap, created } = await store.attachReaction(m, id, body)
+        if (created && host.announce.spoken) {
+          const c = snap.comments?.find((x) => x.id === commentId)
+          if (c) quietly('spoken', () => host.announce.spoken!(m, snap, c))
+        }
         if (created && host.transcription) {
           after(async () => {
             try { await store.transcribeReaction(id, commentId) } catch (err) { console.error('reaction transcription failed', err) }

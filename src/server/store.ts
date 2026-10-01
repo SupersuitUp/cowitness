@@ -3,7 +3,7 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore'
 import { RuleError, isRuleError } from '../errors.js'
 import { CLIP_MAX_BYTES } from '../shared-rules.js'
 import {
-  addVoiceReaction, applySnapPatch, archiveOf, canAutoTranscribe, canRetranscribe, canSeeSnap, coverOf, cowitnessTile,
+  addVoiceReaction, applySnapPatch, archiveOf, assertCanShare, canAutoTranscribe, canRetranscribe, canSeeSnap, coverOf, cowitnessTile,
   failReactionTranscript, markTranscribing, newSnap, openOf, queueOf, reactionAudioPath, reactionTicket,
   setReactionTranscript, thumbPathOf, validateCaption, validateCommentId, validateReactionClip, witnessedOf, type ReactionTicket,
 } from '../snap-rules.js'
@@ -11,8 +11,9 @@ import { snapRow, type SnapRow } from '../format.js'
 import { spokenLanguage } from '../language.js'
 import { parsePromptPatch, promptsDue, validPromptTimes } from '../prompts.js'
 import { zoned } from '../zoned.js'
-import { resolveFeatures, type CowitnessFeatures } from '../features.js'
-import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView } from '../types.js'
+import { circleOf, resolveFeatures, type Circle, type CowitnessFeatures } from '../features.js'
+import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from '../tag-rules.js'
+import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView, TagChoice } from '../types.js'
 import type { CowitnessHost } from './host.js'
 
 // Cowitness at the edge: read, call one rule, write. Every decision is in ../snap-rules.ts.
@@ -60,21 +61,40 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   const audioFile = (snapId: string, commentId: string, contentType: string) =>
     host.storage.bucket().file(reactionAudioPath(host.storage.prefix, snapId, commentId, contentType))
 
+  const needsCircle = features.witnessing === 'audience' || features.justUs
+  // Built only when an option needs it, so an app with none on reads exactly what it read before.
+  const circle = async (): Promise<Circle<M> | undefined> => (needsCircle ? circleOf(features.witnessing, await host.people!()) : undefined)
+  const tagSet = async (): Promise<ReadonlySet<string> | undefined> =>
+    (features.tags ? new Set((await host.tags!.list()).map((t) => t.id)) : undefined)
+  const maxTags = host.tags?.max ?? TAGS_MAX_DEFAULT
+  // What a filing carries beyond its media, checked before the app's pipeline is touched.
+  async function filingExtras(m: M, input: { justUs?: unknown; tags?: unknown }): Promise<{ justUs?: true; tags?: string[] }> {
+    assertCanShare(m, await circle())
+    const justUs = validateJustUs(input.justUs, features.justUs)
+    const tags = input.tags === undefined ? undefined : validateTags(input.tags, await tagSet(), maxTags)
+    return { ...(justUs ? { justUs } : {}), ...(tags ? { tags } : {}) }
+  }
+
   // The photo went up on the app's own upload ticket, exactly as an album photo does; this files it
   // as a snap. The caption is checked first, so a bad one never costs the ticket.
-  async function finalizeSnapPhoto(m: M, photoId: string, input: { caption?: unknown; clientTakenAt?: string }): Promise<Snap<M>> {
+  async function finalizeSnapPhoto(
+    m: M, photoId: string, input: { caption?: unknown; clientTakenAt?: string; justUs?: unknown; tags?: unknown },
+  ): Promise<Snap<M>> {
     const caption = validateCaption(input.caption)
+    const extra = await filingExtras(m, input)
     const ref = snaps().doc(photoId)
-    const data = await host.media.filePhoto(m, photoId, input.clientTakenAt, { ref, record: (media) => newSnap(m, media, caption, nowIso()) as Omit<Snap<M>, 'id'> })
+    const data = await host.media.filePhoto(m, photoId, input.clientTakenAt, { ref, record: (media) => newSnap(m, media, caption, nowIso(), extra) as Omit<Snap<M>, 'id'> })
     return { id: photoId, ...data }
   }
 
   async function finalizeSnapVideo(
-    m: M, photoId: string, input: { caption?: unknown; meta: { durationSec: number; width: number; height: number; takenAt?: string } },
+    m: M, photoId: string,
+    input: { caption?: unknown; meta: { durationSec: number; width: number; height: number; takenAt?: string }; justUs?: unknown; tags?: unknown },
   ): Promise<Snap<M>> {
     const caption = validateCaption(input.caption)
+    const extra = await filingExtras(m, input)
     const ref = snaps().doc(photoId)
-    const data = await host.media.fileVideo(m, photoId, input.meta, { ref, record: (media) => newSnap(m, media, caption, nowIso()) as Omit<Snap<M>, 'id'> })
+    const data = await host.media.fileVideo(m, photoId, input.meta, { ref, record: (media) => newSnap(m, media, caption, nowIso(), extra) as Omit<Snap<M>, 'id'> })
     return { id: photoId, ...data }
   }
 
@@ -85,25 +105,29 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   }
 
   async function listSnaps(m: M): Promise<SnapView<M>[]> {
-    return Promise.all(archiveOf(await readSnaps(), m).map(withUrls))
+    const ctx = await circle()
+    return Promise.all(archiveOf(await readSnaps(), m, ctx).map(withUrls))
   }
 
   // Everything the Cowitness home draws, from ONE read of the list.
   async function listCowitness(m: M): Promise<{ rows: SnapRow[]; streak: SnapRow[]; witnessed: number; queue: SnapView<M>[] }> {
+    const ctx = await circle()
     const all = await readSnaps()
-    const [rows, queue] = await Promise.all([Promise.all(openOf(all, m).map(tileRow)), Promise.all(queueOf(all, m).map(withUrls))])
-    return { rows, queue, streak: archiveOf(all, m).map((s) => snapRow(s)), witnessed: witnessedOf(all, m).length }
+    const [rows, queue] = await Promise.all([Promise.all(openOf(all, m, ctx).map(tileRow)), Promise.all(queueOf(all, m, ctx).map(withUrls))])
+    return { rows, queue, streak: archiveOf(all, m, ctx).map((s) => snapRow(s)), witnessed: witnessedOf(all, m, ctx).length }
   }
 
   async function listWitnessed(m: M): Promise<SnapRow[]> {
-    return Promise.all(witnessedOf(await readSnaps(), m).map(tileRow))
+    const ctx = await circle()
+    return Promise.all(witnessedOf(await readSnaps(), m, ctx).map(tileRow))
   }
 
   async function getSnapView(m: M, id: string): Promise<SnapView<M> | null> {
+    const ctx = await circle()
     const doc = await snaps().doc(id).get()
     if (!doc.exists) return null
     const s = snapFrom(doc)
-    return canSeeSnap(s, m) ? withUrls(s) : null
+    return canSeeSnap(s, m, ctx) ? withUrls(s) : null
   }
 
   // Read-apply-write, shared by every mutation. `update` throws to refuse.
@@ -119,30 +143,37 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     })
   }
 
-  async function patchSnap(m: M, id: string, patch: SnapPatch, opts: { now?: string } = {}): Promise<Snap<M>> {
+  // `before` is handed the snap as it was read, so a route can tell a change from a repeat.
+  async function patchSnap(m: M, id: string, patch: SnapPatch, opts: { now?: string; before?: (s: Snap<M>) => void } = {}): Promise<Snap<M>> {
+    const ctx = await circle()
+    const tags = patch.kind === 'tag' ? await tagSet() : undefined
     return rewrite(id, (s) => {
       // A hidden snap the caller cannot see answers exactly like one that does not exist.
-      if (!canSeeSnap(s, m)) throw new RuleError('snap not found', 404)
-      return applySnapPatch(s, m, patch, opts) as Snap<M>
+      if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
+      opts.before?.(s)
+      return applySnapPatch(s, m, patch, { now: opts.now, ctx, tags, maxTags, justUs: features.justUs }) as Snap<M>
     })
   }
 
   async function listQueue(m: M): Promise<SnapView<M>[]> {
-    return Promise.all(queueOf(await readSnaps(), m).map(withUrls))
+    const ctx = await circle()
+    return Promise.all(queueOf(await readSnaps(), m, ctx).map(withUrls))
   }
 
   async function cowitnessSummary(m: M, lastSeenAt: string): Promise<CowitnessSummary> {
+    const ctx = await circle()
     const all = await readSnaps()
-    const cover = coverOf(all, m)
+    const cover = coverOf(all, m, ctx)
     const coverUrl = cover ? await host.media.signedUrl(cover.paths.thumb) : null
-    return cowitnessTile(all, m, lastSeenAt, coverUrl)
+    return cowitnessTile(all, m, lastSeenAt, coverUrl, ctx)
   }
 
   async function visibleSnap(m: M, id: string): Promise<Snap<M>> {
+    const ctx = await circle()
     const doc = await snaps().doc(id).get()
     if (!doc.exists) throw new RuleError('snap not found', 404)
     const s = snapFrom(doc)
-    if (!canSeeSnap(s, m)) throw new RuleError('snap not found', 404)
+    if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
     return s
   }
 
@@ -179,10 +210,13 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     const { contentType, durationSec } = validateReactionClip({ contentType: ct, size: Number(md.size), durationSec: input.durationSec })
     // With no transcriber the recording is filed settled: playable, with no words to wait for.
     const rec: Recording = { path: file.name, contentType, durationSec, ...(host.transcription ? { status: 'transcribing' as const } : {}) }
+    const ctx = await circle()
     let created = false
     const snap = await rewrite(snapId, (s) => {
+      // A snap kept from this person answers like one that does not exist; one hidden from them keeps its old answer.
+      if (canSeeSnap(s, m) && !canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
       created = !(s.comments ?? []).some((c) => c.id === commentId)
-      return addVoiceReaction(s, m, commentId, rec, { now: nowIso() }) as Snap<M>
+      return addVoiceReaction(s, m, commentId, rec, { now: nowIso(), ctx }) as Snap<M>
     })
     return { snap, created }
   }
@@ -240,8 +274,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   // transcription is still live; recovers one the platform killed mid-run.
   async function retranscribeReaction(m: M, snapId: string, commentId: string, language?: unknown): Promise<Snap<M>> {
     const lang = spokenLanguage(language, transcriber().languages)
+    const ctx = await circle()
     const marked = await rewrite(snapId, (s) => {
-      if (!canSeeSnap(s, m)) throw new RuleError('snap not found', 404)
+      if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
       const c = (s.comments ?? []).find((x) => x.id === commentId)
       if (!c?.recording) throw new RuleError('reaction not found', 404)
       if (!canRetranscribe(c.recording, c.at, nowIso())) throw new RuleError('this reaction is still being transcribed', 409)
@@ -301,8 +336,16 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     return next
   }
 
+  // What this person may do here. In the each-other kind everyone does both.
+  async function whoAmI(m: M): Promise<{ share: boolean; witness: boolean }> {
+    const ctx = await circle()
+    if (ctx?.witnessing !== 'audience') return { share: true, witness: true }
+    return { share: ctx.sharers.has(m), witness: ctx.witnesses.has(m) }
+  }
+  const tagChoices = async (): Promise<TagChoice[]> => (features.tags ? host.tags!.list() : [])
+
   return {
-    features,
+    features, whoAmI, tagChoices,
     finalizeSnapPhoto, finalizeSnapVideo, readSnaps, listSnaps, listCowitness, listWitnessed, getSnapView, patchSnap,
     listQueue, cowitnessSummary, reactionUploadUrl, attachReaction, reactionAudioUrl, transcribeReaction, retranscribeReaction,
     sendDuePrompts, promptSettings, savePromptSettings,
