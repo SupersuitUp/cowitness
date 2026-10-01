@@ -1,4 +1,5 @@
-import { RuleError, audioExtension, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
+import { RuleError, audioExtension, CLIP_CONTENT_TYPES, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
+import { canRetranscribe } from './snap-rules.js'
 import type { Member, Snap, VoiceInfo } from './types.js'
 
 // A voice snap, as rules: a recording shared to be witnessed, with no picture. Its words arrive
@@ -15,6 +16,11 @@ export function validateClientId(v: unknown, name: string): string {
 // `prefix` is the app's storage prefix, so a voice note lands beside the app's own files.
 export const voiceSnapPath = (prefix: string, snapId: string, contentType: string) =>
   `${prefix}snaps-voice/${snapId}.${audioExtension(contentType)}`
+
+// Every path one id could have, one per audio type. An id is one recording: once any of these
+// exists, the id's type is fixed and no other is ever signed or filed for it.
+export const voiceSnapPaths = (prefix: string, snapId: string): string[] =>
+  [...new Set(CLIP_CONTENT_TYPES.map((ct) => voiceSnapPath(prefix, snapId, ct)))]
 
 // The custom metadata key a voice upload is stamped with: who the signed PUT was issued to.
 export const VOICE_UPLOADER_KEY = 'cowitness-by'
@@ -48,3 +54,19 @@ export function setVoiceTranscript(s: Snap, text: string): Snap {
 
 export const failVoiceTranscript = (s: Snap, reason: string) =>
   onVoice(s, (v) => ({ ...settled(v), status: 'failed', reason }))
+
+// Who may hear a voice snap's words again. Its author may at any time but during a live run (another
+// language, another try). Anyone else who can see it may only rescue a run that failed or stalled
+// past the window; settled words are the author's, and a stranger looping the transcriber is a cost.
+export function assertMayRetranscribeVoice(s: Snap, m: Member, now: string): void {
+  if (s.kind !== 'voice' || !s.voice) throw new RuleError('voice note not found', 404)
+  const v = s.voice
+  if (!canRetranscribe(v, s.createdAt, now)) throw new RuleError('this voice note is still being transcribed', 409)
+  if (s.by !== m && v.status !== 'failed' && v.status !== 'transcribing') throw new RuleError('only the person who shared it can transcribe it again', 403)
+}
+
+// Whether a finished run may still write: only while the snap is in the very run it started. A run
+// overtaken by a newer one (a Try again after it stalled) is dropped, so it can neither overwrite the
+// newer words nor clear the newer run's status.
+export const isVoiceRun = (s: Snap, startedAt: string | undefined) =>
+  s.voice?.status === 'transcribing' && startedAt !== undefined && s.voice.startedAt === startedAt

@@ -218,8 +218,8 @@ describe('the voice upload pipeline', () => {
     upload(b)
     await routes.voice.POST(post({ ...body, caption: 'first' }))
     await Promise.all(scheduled.splice(0))
-    // A second ticket for the same id hands back nothing to PUT to.
-    expect(await store.voiceUploadUrl('ana', { ...body, size: 4 })).toEqual({ snapId: 'v-abcdefgh', uploaded: true })
+    // A filed id is never signed again, even for its author.
+    await expect(store.voiceUploadUrl('ana', { ...body, size: 4 })).rejects.toMatchObject({ status: 409 })
     // Filing it again returns the snap as it is: no second record, announcement or transcription.
     const again = await (await routes.voice.POST(post({ ...body, caption: 'second' }))).json()
     expect(again).toMatchObject({ caption: 'first' })
@@ -235,5 +235,137 @@ describe('the voice upload pipeline', () => {
     expect((await routes.voice.POST(post(body))).status).toBe(409)
     expect(f.raw('snaps', 'v-abcdefgh')).toMatchObject({ kind: 'photo' })
     expect(host.announce.shared).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('one id, one recording', () => {
+  it('signs nothing for an id that is already a snap, whoever asks', async () => {
+    const { host, routes, b } = setup()
+    upload(b)
+    await routes.voice.POST(post(body))
+    expect((await routes.voiceUploadUrl.POST(post({ ...body, size: 4 }))).status).toBe(409)
+    as(host, 'ben')
+    expect((await routes.voiceUploadUrl.POST(post({ ...body, contentType: 'audio/webm', size: 4 }))).status).toBe(409)
+    await routes.photo.POST(post({ photoId: 'p-photo0001' }))
+    expect((await routes.voiceUploadUrl.POST(post({ ...body, snapId: 'p-photo0001', size: 4 }))).status).toBe(409)
+  })
+  it('fixes an id\'s type at its first upload: another type is never signed or filed for it', async () => {
+    const { routes, b, f } = setup()
+    upload(b)
+    expect((await routes.voiceUploadUrl.POST(post({ ...body, contentType: 'audio/webm', size: 4 }))).status).toBe(409)
+    expect((await routes.voice.POST(post({ ...body, contentType: 'audio/webm' }))).status).toBe(409)
+    expect(f.raw('snaps', 'v-abcdefgh')).toBeUndefined()
+    expect((await routes.voice.POST(post(body))).status).toBe(200)
+  })
+})
+
+describe('who may transcribe a voice snap again', () => {
+  const NOW = new Date('2026-09-30T12:00:00.000Z')
+  const later = (min: number) => new Date(NOW.getTime() + min * 60_000)
+  it('lets its author redo settled words; anyone else only a failed or stalled run', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    try {
+      const transcribe = vi.fn(async () => 'hello there')
+      const { host, b } = fakeHost({ features: { voiceSnaps: true }, transcription: { languages: ['en', 'fr'], transcribe } })
+      const store = createCowitnessStore(host)
+      const routes = createCowitnessHandlers(host, store)
+      upload(b)
+      await routes.voice.POST(post(body))
+      await Promise.all(scheduled.splice(0))
+      // Settled words: the author may hear them again in another language, nobody else may.
+      await expect(store.retranscribeVoiceSnap('ben', 'v-abcdefgh', 'fr')).rejects.toMatchObject({ status: 403 })
+      as(host, 'ben')
+      expect((await routes.voiceTranscribe.POST(post({ language: 'fr' }), id('v-abcdefgh'))).status).toBe(403)
+      expect((await store.retranscribeVoiceSnap('ana', 'v-abcdefgh', 'fr')).voice).toMatchObject({ language: 'fr', text: 'hello there' })
+      // A failed run is anyone's to try again.
+      transcribe.mockRejectedValueOnce(new Error('down'))
+      expect((await store.retranscribeVoiceSnap('ana', 'v-abcdefgh')).voice).toMatchObject({ status: 'failed' })
+      expect((await store.retranscribeVoiceSnap('ben', 'v-abcdefgh')).voice).toMatchObject({ text: 'hello there' })
+      // A live run is refused to everyone; one stalled past the window is anyone's.
+      let finish!: (w: string) => void
+      transcribe.mockImplementationOnce(() => new Promise<string>((r) => { finish = r }))
+      const live = store.retranscribeVoiceSnap('ana', 'v-abcdefgh')
+      await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+      await expect(store.retranscribeVoiceSnap('ben', 'v-abcdefgh')).rejects.toMatchObject({ status: 409 })
+      await expect(store.retranscribeVoiceSnap('ana', 'v-abcdefgh')).rejects.toMatchObject({ status: 409 })
+      vi.setSystemTime(later(6))
+      expect((await store.retranscribeVoiceSnap('ben', 'v-abcdefgh')).voice).toMatchObject({ text: 'hello there' })
+      finish('too late')
+      await live
+    } finally { vi.useRealTimers() }
+  })
+  it('is not answered where voice notes are off', async () => {
+    const { host, b } = fakeHost({ features: { voiceSnaps: true } })
+    upload(b)
+    const on = createCowitnessHandlers(host, createCowitnessStore(host))
+    vi.mocked(host.member).mockResolvedValue('ana')
+    await on.voice.POST(post(body))
+    await Promise.all(scheduled.splice(0))
+    const off = fakeHost()
+    const routes = createCowitnessHandlers({ ...off.host, db: host.db, storage: host.storage })
+    const res = await routes.voiceTranscribe.POST(post({}), id('v-abcdefgh'))
+    expect(res.status).toBe(404)
+    expect(await res.json()).toMatchObject({ error: 'voice notes are not on here' })
+  })
+})
+
+describe('a transcription overtaken by a newer one', () => {
+  const NOW = new Date('2026-09-30T12:00:00.000Z')
+  // Each call waits for the test to say what it heard, so the order of finishing is chosen here.
+  function heldTranscriber() {
+    const pending: ((w: string) => void)[] = []
+    const transcribe = vi.fn(() => new Promise<string>((r) => { pending.push(r) }))
+    return { transcribe, pending }
+  }
+  it('is dropped for a voice snap, whichever finishes first, and never clears the newer run', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    try {
+      const { transcribe, pending } = heldTranscriber()
+      const { host, b, f } = fakeHost({ features: { voiceSnaps: true }, transcription: { languages: ['en', 'fr'], transcribe } })
+      const store = createCowitnessStore(host)
+      upload(b)
+      await createCowitnessHandlers(host, store).voice.POST(post(body))
+      await vi.waitFor(() => expect(pending).toHaveLength(1))
+      vi.setSystemTime(new Date(NOW.getTime() + 6 * 60_000))
+      const second = store.retranscribeVoiceSnap('ana', 'v-abcdefgh', 'fr')
+      await vi.waitFor(() => expect(pending).toHaveLength(2))
+      const secondStart = (f.raw('snaps', 'v-abcdefgh') as { voice: { startedAt: string } }).voice.startedAt
+      // The stalled first run comes back first: dropped, and the second is still running.
+      pending[0]('first words')
+      await Promise.all(scheduled.splice(0))
+      expect(f.raw('snaps', 'v-abcdefgh')).toMatchObject({ voice: { status: 'transcribing', startedAt: secondStart, text: '' } })
+      pending[1]('second words')
+      await second
+      expect((f.raw('snaps', 'v-abcdefgh') as { voice: object }).voice).toEqual({ path: PATH, contentType: 'audio/mp4', durationSec: 9, language: 'fr', text: 'second words' })
+    } finally { vi.useRealTimers() }
+  })
+  it('is dropped for a spoken reaction too', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    try {
+      const { transcribe, pending } = heldTranscriber()
+      const { host, b, f } = fakeHost({ features: { voiceSnaps: true }, transcription: { languages: ['en', 'fr'], transcribe } })
+      const store = createCowitnessStore(host)
+      const routes = createCowitnessHandlers(host, store)
+      await routes.photo.POST(post({ photoId: 'p-photo0001' }))
+      const rpath = 'p/snaps-audio/p-photo0001/r-reaction1.m4a'
+      b.put(rpath, Buffer.from('abcd'), 'audio/mp4')
+      as(host, 'ben')
+      await routes.reactions.POST(post({ commentId: 'r-reaction1', contentType: 'audio/mp4', durationSec: 3 }), id('p-photo0001'))
+      await vi.waitFor(() => expect(pending).toHaveLength(1))
+      vi.setSystemTime(new Date(NOW.getTime() + 6 * 60_000))
+      const second = store.retranscribeReaction('ben', 'p-photo0001', 'r-reaction1', 'fr')
+      await vi.waitFor(() => expect(pending).toHaveLength(2))
+      pending[0]('first words')
+      await Promise.all(scheduled.splice(0))
+      const comment = () => (f.raw('snaps', 'p-photo0001') as { comments: { text: string; recording: { status?: string } }[] }).comments[0]
+      expect(comment()).toMatchObject({ text: '', recording: { status: 'transcribing' } })
+      pending[1]('second words')
+      await second
+      expect(comment()).toMatchObject({ text: 'second words' })
+      expect(comment().recording).not.toHaveProperty('status')
+    } finally { vi.useRealTimers() }
   })
 })

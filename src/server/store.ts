@@ -14,7 +14,8 @@ import { zoned } from '../zoned.js'
 import { circleOf, resolveFeatures, type Circle, type CowitnessFeatures } from '../features.js'
 import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from '../tag-rules.js'
 import {
-  VOICE_UPLOADER_KEY, failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath,
+  VOICE_UPLOADER_KEY, assertMayRetranscribeVoice, failVoiceTranscript, isVoiceRun, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript,
+  validateClientId, voiceSnapPath, voiceSnapPaths,
 } from '../voice-rules.js'
 import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView, TagChoice, VoiceInfo } from '../types.js'
 import type { CowitnessHost } from './host.js'
@@ -140,13 +141,16 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     return canSeeSnap(s, m, ctx) ? withUrls(s) : null
   }
 
-  // Read-apply-write, shared by every mutation. `update` throws to refuse.
-  async function rewrite(id: string, update: (s: Snap<M>) => Snap<M>): Promise<Snap<M>> {
+  // Read-apply-write, shared by every mutation. `update` throws to refuse, or returns null to leave
+  // the snap exactly as read, unwritten.
+  async function rewrite(id: string, update: (s: Snap<M>) => Snap<M> | null): Promise<Snap<M>> {
     const ref = snaps().doc(id)
     return host.db().runTransaction(async (tx) => {
       const doc = await tx.get(ref)
       if (!doc.exists) throw new RuleError('snap not found', 404)
-      const updated = update(snapFrom(doc))
+      const current = snapFrom(doc)
+      const updated = update(current)
+      if (updated === null) return current
       const { id: _id, ...data } = updated
       tx.set(ref, data)
       return updated
@@ -249,6 +253,12 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     const t = transcriber()
     const c = (marked.comments ?? []).find((x) => x.id === commentId)!
     const rec = c.recording!
+    // A run overtaken by a newer one (Try again after it stalled) writes nothing: not its words over
+    // the newer ones, and not a cleared status while the newer run is still going.
+    const stillThisRun = (s: Snap<M>) => {
+      const now = (s.comments ?? []).find((x) => x.id === commentId)?.recording
+      return now?.status === 'transcribing' && rec.startedAt !== undefined && now.startedAt === rec.startedAt
+    }
     let words: string
     try {
       const file = host.storage.bucket().file(rec.path)
@@ -260,9 +270,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
       console.error(`transcribeReaction: ${rec.path}`, err)
       // A refusal written for a reader (ours or the transcriber's own) keeps its words.
       const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
-      return rewrite(snapId, (s) => failReactionTranscript(s, commentId, reason) as Snap<M>)
+      return rewrite(snapId, (s) => (stillThisRun(s) ? failReactionTranscript(s, commentId, reason) as Snap<M> : null))
     }
-    return rewrite(snapId, (s) => setReactionTranscript(s, commentId, words) as Snap<M>)
+    return rewrite(snapId, (s) => (stillThisRun(s) ? setReactionTranscript(s, commentId, words) as Snap<M> : null))
   }
 
   // The AUTO path, scheduled by the attach route right after it creates a reaction. A no-op unless
@@ -302,6 +312,15 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     if (!(CLIP_CONTENT_TYPES as readonly string[]).includes(ct)) throw new RuleError('unsupported audio type', 400)
     return ct
   }
+  // One id is one recording: the type its first upload went up as is the only one it ever has.
+  async function assertOneType(snapId: string, contentType: string): Promise<void> {
+    const mine = voiceSnapPath(host.storage.prefix, snapId, contentType)
+    for (const path of voiceSnapPaths(host.storage.prefix, snapId)) {
+      if (path === mine) continue
+      const [there] = await host.storage.bucket().file(path).exists()
+      if (there) throw new RuleError('that id is already a recording of another type', 409)
+    }
+  }
   // The bytes at a voice path are someone's only if the signed PUT that put them there was issued
   // to them: that PUT had to send the uploader header, so storage keeps who it was. Bytes nobody
   // signed for, or that someone else uploaded, are a ticket that is not this person's.
@@ -322,6 +341,8 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     assertCanShare(m, await circle())
     const snapId = validateClientId(input.snapId, 'snapId')
     const { contentType } = validateClip(input)
+    if ((await snaps().doc(snapId).get()).exists) throw new RuleError('that snap already exists', 409)
+    await assertOneType(snapId, contentType)
     const file = voiceFile(snapId, contentType)
     const [exists] = await file.exists()
     if (exists) {
@@ -353,6 +374,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     }
     const prior = await ref.get()
     if (prior.exists) return existing(snapFrom(prior))
+    await assertOneType(snapId, ct)
     const file = voiceFile(snapId, ct)
     const [exists] = await file.exists()
     if (!exists) throw new RuleError('that recording did not finish uploading', 404)
@@ -388,9 +410,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     } catch (err) {
       console.error(`transcribeVoiceSnap: ${v.path}`, err)
       const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
-      return rewrite(snapId, (s) => failVoiceTranscript(s, reason) as Snap<M>)
+      return rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? failVoiceTranscript(s, reason) as Snap<M> : null))
     }
-    return rewrite(snapId, (s) => setVoiceTranscript(s, words) as Snap<M>)
+    return rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? setVoiceTranscript(s, words) as Snap<M> : null))
   }
 
   // The AUTO path, scheduled by the voice route right after it files a snap. A no-op unless the
@@ -405,14 +427,15 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     return ran ? finishVoiceTranscription(snapId, marked, marked.voice?.language ?? lang) : marked
   }
 
-  // Try again, from anyone who can see the snap; refused with a conflict while a live run is going.
+  // Try again: its author at any time but a live run, anyone else who can see it only a failed or
+  // stalled run (assertMayRetranscribeVoice).
   async function retranscribeVoiceSnap(m: M, snapId: string, language?: unknown): Promise<Snap<M>> {
+    voiceOn()
     const lang = spokenLanguage(language, transcriber().languages)
     const ctx = await circle()
     const marked = await rewrite(snapId, (s) => {
       if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
-      if (!s.voice) throw new RuleError('voice note not found', 404)
-      if (!canRetranscribe(s.voice, s.createdAt, nowIso())) throw new RuleError('this voice note is still being transcribed', 409)
+      assertMayRetranscribeVoice(s, m, nowIso())
       return markVoiceTranscribing(s, lang === 'auto' ? undefined : lang, { now: nowIso() }) as Snap<M>
     })
     return finishVoiceTranscription(snapId, marked, lang)

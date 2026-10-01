@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { snapRow } from './format.js'
-import { failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath } from './voice-rules.js'
+import { assertMayRetranscribeVoice, isVoiceRun, voiceSnapPaths, failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath } from './voice-rules.js'
 
 const NOW = '2026-09-30T12:00:00.000Z'
 const voice = { path: 'p/snaps-voice/v-abcdefgh.m4a', contentType: 'audio/mp4', durationSec: 9, status: 'transcribing' as const, text: '' }
@@ -30,5 +30,24 @@ describe('a voice snap', () => {
     const plain = { id: 'v2', ...newVoiceSnap('ana', voice, '', NOW, { tags: [] }) }
     expect('justUs' in plain || 'tags' in plain).toBe(false)
     expect(Object.keys(snapRow(plain))).not.toContain('justUs')
+  })
+  it('has one path per type for an id, and knows which run may still write', () => {
+    expect(voiceSnapPaths('p/', 'v-abcdefgh')).toContain('p/snaps-voice/v-abcdefgh.m4a')
+    expect(new Set(voiceSnapPaths('p/', 'v-abcdefgh')).size).toBe(voiceSnapPaths('p/', 'v-abcdefgh').length)
+    const s = { id: 'v1', ...newVoiceSnap('ana', voice, '', NOW, {}) }
+    const running = markVoiceTranscribing(s, undefined, { now: NOW })
+    expect(isVoiceRun(running, NOW)).toBe(true)
+    expect(isVoiceRun(running, '2026-09-30T11:00:00.000Z')).toBe(false)
+    expect(isVoiceRun(setVoiceTranscript(running, 'hi'), NOW)).toBe(false)
+  })
+  it('lets the author redo words, and anyone else only a failed or stalled run', () => {
+    const s = { id: 'v1', ...newVoiceSnap('ana', voice, '', NOW, {}) }
+    const done = setVoiceTranscript(s, 'hi')
+    expect(() => assertMayRetranscribeVoice(done, 'ana', NOW)).not.toThrow()
+    expect(() => assertMayRetranscribeVoice(done, 'ben', NOW)).toThrow(/only the person who shared it/)
+    expect(() => assertMayRetranscribeVoice(failVoiceTranscript(s, 'x'), 'ben', NOW)).not.toThrow()
+    const live = markVoiceTranscribing(s, undefined, { now: NOW })
+    expect(() => assertMayRetranscribeVoice(live, 'ana', NOW)).toThrow(/still being transcribed/)
+    expect(() => assertMayRetranscribeVoice(live, 'ben', '2026-09-30T12:06:00.000Z')).not.toThrow()
   })
 })
