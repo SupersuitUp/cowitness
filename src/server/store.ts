@@ -9,8 +9,10 @@ import {
 } from '../snap-rules.js'
 import { snapRow, type SnapRow } from '../format.js'
 import { spokenLanguage } from '../language.js'
+import { parsePromptPatch, promptsDue } from '../prompts.js'
+import { zoned } from '../zoned.js'
 import { resolveFeatures, type CowitnessFeatures } from '../features.js'
-import type { CowitnessSummary, MediaSnap, Recording, Snap, SnapPatch, SnapView } from '../types.js'
+import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView } from '../types.js'
 import type { CowitnessHost } from './host.js'
 
 // Cowitness at the edge: read, call one rule, write. Every decision is in ../snap-rules.ts.
@@ -248,10 +250,53 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     return finishTranscription(snapId, commentId, marked, lang)
   }
 
+  const promptsOn = () => {
+    if (!features.prompts || !host.prompts) throw new RuleError('reminders are not on here', 404)
+    return host.prompts
+  }
+  const report = (what: string, err: unknown) => { try { host.log?.(what, err) } catch { /* a log that throws is dropped too */ } }
+
+  // Each reminder is claimed with create() BEFORE it is sent, so two overlapping runs, a late run
+  // and a repeated run can never send the same slot on the same day twice (the claim's id is the
+  // slot's key). A nudge that fails keeps its claim: a reminder sent twice is worse than one missed.
+  async function sendDuePrompts(now: Date): Promise<string[]> {
+    const p = promptsOn()
+    const today = zoned(now, p.timeZone).dayKey
+    const claims = host.db().collection(p.collection)
+    const sent = new Set((await claims.where('dayKey', '==', today).get()).docs.map((d) => d.id))
+    const done: string[] = []
+    for (const due of promptsDue(now, p.timeZone, await p.people(), sent)) {
+      try { await claims.doc(due.slotKey).create({ dayKey: today, person: due.key, sentAt: now.toISOString() }) } catch { continue }
+      try { await p.nudge(due.key, due.slotKey) } catch (err) { report('prompts.nudge failed', err) }
+      done.push(due.slotKey)
+    }
+    return done
+  }
+
+  async function promptPerson(m: M) {
+    const p = promptsOn()
+    const me = (await p.people()).find((x) => x.key === m)
+    if (!me) throw new RuleError('you have no reminders here', 403)
+    return { p, me }
+  }
+
+  async function promptSettings(m: M): Promise<PromptSettings & { today: string }> {
+    const { p, me } = await promptPerson(m)
+    return { times: me.times, snoozedUntil: me.snoozedUntil, today: zoned(new Date(), p.timeZone).dayKey }
+  }
+
+  async function savePromptSettings(m: M, body: unknown): Promise<PromptSettings> {
+    const { p, me } = await promptPerson(m)
+    const next = parsePromptPatch(body, { times: me.times, snoozedUntil: me.snoozedUntil }, zoned(new Date(), p.timeZone).dayKey)
+    await p.save(m, next)
+    return next
+  }
+
   return {
     features,
     finalizeSnapPhoto, finalizeSnapVideo, readSnaps, listSnaps, listCowitness, listWitnessed, getSnapView, patchSnap,
     listQueue, cowitnessSummary, reactionUploadUrl, attachReaction, reactionAudioUrl, transcribeReaction, retranscribeReaction,
+    sendDuePrompts, promptSettings, savePromptSettings,
   }
 }
 

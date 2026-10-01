@@ -24,6 +24,12 @@ export function fakeFirestore() {
     get: async () => snapshot(name, id),
     set: async (data: Data) => { coll(name).set(id, structuredClone(data)) },
     delete: async () => { coll(name).delete(id) },
+    // Firestore's create-once: refused when the document exists. No await before the check, so two
+    // overlapping callers can never both create.
+    create: async (data: Data) => {
+      if (coll(name).has(id)) throw Object.assign(new Error('ALREADY_EXISTS'), { code: 6 })
+      coll(name).set(id, structuredClone(data))
+    },
   })
   const query = (name: string, keep: (d: Data) => boolean) => ({
     get: async () => ({ docs: [...coll(name).entries()].filter(([, d]) => keep(d)).map(([id]) => snapshot(name, id)) }),

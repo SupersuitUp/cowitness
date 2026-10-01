@@ -124,6 +124,14 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         return Response.redirect(await store.reactionAudioUrl(m, id, commentId), 302)
       }),
     },
+    // A person's own reminder times and "not today". The app runs sendDuePrompts from its own timer.
+    prompts: {
+      GET: (req: Request) => handle(async () => Response.json(await store.promptSettings(await signedIn(req)))),
+      PATCH: (req: Request) => handle(async () => {
+        const m = await signedIn(req)
+        return Response.json(await store.savePromptSettings(m, await req.json()))
+      }),
+    },
     // Body: { language? }. Transcribes a reaction that is already filed, again. No re-recording.
     reactionTranscribe: {
       POST: (req: Request, { params }: ReactionParams) => handle(async () => {
