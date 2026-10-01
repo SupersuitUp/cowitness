@@ -28,8 +28,10 @@ export const canSeeSnap = (s: Pick<Snap, 'by' | 'hiddenAt' | 'justUs'>, m: Membe
 
 // Whether a host may tell `m` about this snap. Every announcement hands the host the snap, whose
 // `justUs` is the signal; a host MUST check each recipient with this before telling them anything,
-// passing the same circle the package builds (`circleOf(witnessing, people)`). With no circle a
-// "just us" snap may be announced to its author only.
+// passing the same circle the package builds (`circleOf(witnessing, people)`), and only when it
+// builds one: the audience kind or "just us" on, from people() as it reads now. With neither on, no
+// circle, never one kept from before an option was turned off. With no circle a "just us" snap may
+// be announced to its author only.
 export const mayHear = (s: Pick<Snap, 'by' | 'hiddenAt' | 'justUs'>, m: Member, ctx?: Circle): boolean => canSeeSnap(s, m, ctx)
 
 // Whether `m` has seen this snap. In the audience kind a witness has their own seen; the person who

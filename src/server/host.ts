@@ -70,6 +70,11 @@ export interface CowitnessHost<M extends string> {
    * (both exported from the package root); with no circle a "just us" snap may be told to its
    * author only. "Tell everyone but the actor" would put a private moment on a lock screen that
    * every route refuses to show.
+   *
+   * Pass a circle exactly when the package builds one: when `witnessing` is 'audience' or `justUs`
+   * is on, made from `people()` as it reads now. With neither on, pass none. Never keep a circle
+   * from before an option was turned off: a snap filed "just us" stays "just us", and an old circle
+   * would tell someone who has since stopped sharing.
    */
   announce: {
     shared(m: M, s: Snap<M>): void

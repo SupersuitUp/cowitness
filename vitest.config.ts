@@ -16,6 +16,11 @@ export default defineConfig({
     exclude: ['test/consumer/**', 'node_modules/**'],
   },
   resolve: {
-    alias: { 'server-only': fileURLToPath(new URL('./test/support/empty.ts', import.meta.url)) },
+    // The consumer app's own modules import the package by name; in tests that name is this source.
+    alias: [
+      { find: 'server-only', replacement: fileURLToPath(new URL('./test/support/empty.ts', import.meta.url)) },
+      { find: /^@supersuit\/cowitness\/server$/, replacement: fileURLToPath(new URL('./src/server/index.ts', import.meta.url)) },
+      { find: /^@supersuit\/cowitness$/, replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
+    ],
   },
 })
