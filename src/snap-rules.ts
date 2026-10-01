@@ -1,4 +1,5 @@
 import type { Member } from './types.js'
+import type { Circle } from './features.js'
 import type { Comment, CowitnessSummary, FiledMedia, Recording, Snap, SnapPatch } from './types.js'
 import { RuleError, addComment, heartComment, lastMessageFromOther, validateClip, audioExtension, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
 
@@ -16,7 +17,21 @@ export function validateCaption(v: unknown): string {
   return t
 }
 
-export const canSeeSnap = (s: Pick<Snap, 'by' | 'hiddenAt'>, m: Member) => s.hiddenAt === null || s.by === m
+// The `ctx` a rule is given says who shares and who witnesses. With none, every rule is exactly
+// the rule from before options existed.
+export const canSeeSnap = (s: Pick<Snap, 'by' | 'hiddenAt' | 'justUs'>, m: Member, ctx?: Circle) =>
+  (s.hiddenAt === null || s.by === m) && !(ctx && s.justUs === true && !ctx.sharers.has(m))
+
+// Whether `m` has seen this snap. In the audience kind a witness has their own seen; the person who
+// shared it, and anyone who only shares, read the first one as the receipt.
+export function seenBy(s: Snap, m: Member, ctx?: Circle): boolean {
+  if (ctx?.witnessing === 'audience' && s.by !== m && ctx.witnesses.has(m)) return s.witnessedBy?.[m] !== undefined
+  return s.witnessedAt !== null
+}
+
+export function assertCanShare(m: Member, ctx?: Circle): void {
+  if (ctx?.witnessing === 'audience' && !ctx.sharers.has(m)) throw new RuleError('you cannot share here', 403)
+}
 
 export function newSnap(m: Member, media: FiledMedia, caption: string, now: string): Omit<Snap, 'id'> {
   return {
@@ -26,10 +41,13 @@ export function newSnap(m: Member, media: FiledMedia, caption: string, now: stri
   }
 }
 
-export function applySnapPatch(s: Snap, actor: Member, patch: SnapPatch, opts: { now?: string; id?: string } = {}): Snap {
+export function applySnapPatch(
+  s: Snap, actor: Member, patch: SnapPatch,
+  opts: { now?: string; id?: string; ctx?: Circle; tags?: ReadonlySet<string>; maxTags?: number; justUs?: boolean } = {},
+): Snap {
   const now = opts.now ?? new Date().toISOString()
   // A hidden snap belongs to the member who hid it until they bring it back.
-  if (!canSeeSnap(s, actor)) throw new RuleError('this snap is hidden', 403)
+  if (!canSeeSnap(s, actor, opts.ctx)) throw new RuleError('this snap is hidden', 403)
   switch (patch.kind) {
     case 'comment':
       return addComment(s, actor, patch.text, { now, id: opts.id, images: patch.images })
@@ -45,7 +63,15 @@ export function applySnapPatch(s: Snap, actor: Member, patch: SnapPatch, opts: {
     // reaction rides in the same write so the receipt and the words can never disagree.
     case 'witness': {
       if (s.by === actor) throw new RuleError('you cannot witness your own snap', 400)
-      const seen = s.witnessedAt ? s : { ...s, witnessedAt: now }
+      let seen: Snap
+      if (opts.ctx?.witnessing === 'audience') {
+        if (!opts.ctx.witnesses.has(actor)) throw new RuleError('only someone who witnesses can witness', 403)
+        seen = s.witnessedBy?.[actor]
+          ? s
+          : { ...s, witnessedBy: { ...(s.witnessedBy ?? {}), [actor]: now }, witnessedAt: s.witnessedAt ?? now }
+      } else {
+        seen = s.witnessedAt ? s : { ...s, witnessedAt: now }
+      }
       const text = patch.text?.trim()
       return text ? addComment(seen, actor, text, { now, id: opts.id }) : seen
     }
@@ -60,18 +86,18 @@ const newestFirst = (a: Snap, b: Snap) => b.createdAt.localeCompare(a.createdAt)
 const oldestFirst = (a: Snap, b: Snap) => a.createdAt.localeCompare(b.createdAt)
 
 // Everything, forever, both members in one stream, newest first.
-export function archiveOf<T extends Snap>(snaps: T[], m: Member): T[] {
-  return snaps.filter((s) => canSeeSnap(s, m)).sort(newestFirst)
+export function archiveOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle): T[] {
+  return snaps.filter((s) => canSeeSnap(s, m, ctx)).sort(newestFirst)
 }
 
 // The Cowitness home keeps only what is still open: nothing witnessed yet, from either side.
 // Everything witnessed moves to its own shelf, so the home stays small however long this runs.
-export function openOf<T extends Snap>(snaps: T[], m: Member): T[] {
-  return archiveOf(snaps, m).filter((s) => s.witnessedAt === null)
+export function openOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle): T[] {
+  return archiveOf(snaps, m, ctx).filter((s) => !seenBy(s, m, ctx))
 }
 
-export function witnessedOf<T extends Snap>(snaps: T[], m: Member): T[] {
-  return archiveOf(snaps, m).filter((s) => s.witnessedAt !== null)
+export function witnessedOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle): T[] {
+  return archiveOf(snaps, m, ctx).filter((s) => seenBy(s, m, ctx))
 }
 
 // The one image a grid tile shows: the thumbnail, or a video's poster. A tile never needs the
@@ -81,30 +107,32 @@ export function thumbPathOf(s: Snap): string | null {
   return s.paths.thumb || null
 }
 
-export function snapHasNew(s: Snap, m: Member, lastSeenAt: string): boolean {
-  if (!canSeeSnap(s, m)) return false
+export function snapHasNew(s: Snap, m: Member, lastSeenAt: string, ctx?: Circle): boolean {
+  if (!canSeeSnap(s, m, ctx)) return false
   const otherAt = lastMessageFromOther(s, m)
-  // Anyone but me posted it: assumes two people; the audience kind replaces this later.
   return (s.by !== m && s.createdAt > lastSeenAt) || (otherAt !== undefined && otherAt > lastSeenAt)
 }
 
 // The newest visible snap with an image to show. A video with no poster has none.
-export function coverOf(snaps: Snap[], m: Member): Snap | null {
-  return archiveOf(snaps, m).find((s) => !!s.paths.thumb) ?? null
+export function coverOf(snaps: Snap[], m: Member, ctx?: Circle): Snap | null {
+  return archiveOf(snaps, m, ctx).find((s) => !!s.paths.thumb) ?? null
 }
 
-// What is waiting for `m`: everyone else's snaps, not hidden, not yet witnessed, oldest
-// first, because a session walks through the day in the order it happened.
-// Everyone-but-me is the queue: assumes two people; the audience kind replaces this later.
-export function queueOf<T extends Snap>(snaps: T[], m: Member): T[] {
-  return snaps.filter((s) => s.by !== m && s.hiddenAt === null && s.witnessedAt === null).sort(oldestFirst)
+// What is waiting for `m`, oldest first, because a session walks through the day in the order it
+// happened. In the audience kind only a witness has a queue, and it is what they have not seen.
+export function queueOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle): T[] {
+  if (ctx?.witnessing === 'audience') {
+    if (!ctx.witnesses.has(m)) return []
+    return snaps.filter((s) => s.by !== m && s.hiddenAt === null && canSeeSnap(s, m, ctx) && s.witnessedBy?.[m] === undefined).sort(oldestFirst)
+  }
+  return snaps.filter((s) => s.by !== m && s.hiddenAt === null && s.witnessedAt === null && (!ctx || canSeeSnap(s, m, ctx))).sort(oldestFirst)
 }
 
-export function cowitnessTile(snaps: Snap[], m: Member, lastSeenAt: string, coverUrl: string | null): CowitnessSummary {
-  const visible = archiveOf(snaps, m)
+export function cowitnessTile(snaps: Snap[], m: Member, lastSeenAt: string, coverUrl: string | null, ctx?: Circle): CowitnessSummary {
+  const visible = archiveOf(snaps, m, ctx)
   return {
-    count: visible.length, coverUrl, hasNew: visible.some((s) => snapHasNew(s, m, lastSeenAt)),
-    waiting: queueOf(snaps, m).length,
+    count: visible.length, coverUrl, hasNew: visible.some((s) => snapHasNew(s, m, lastSeenAt, ctx)),
+    waiting: queueOf(snaps, m, ctx).length,
   }
 }
 

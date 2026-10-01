@@ -39,7 +39,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     if (!a) return
     if (a.kind === 'message') quietly('message', () => host.announce.message(m, snap, a.comment))
     else if (a.kind === 'heart') quietly('heart', () => host.announce.heart(m, snap, a.comment))
-    else quietly('witnessed', () => host.announce.witnessed(m, snap, a.firstWords))
+    else if (a.kind === 'witnessed') quietly('witnessed', () => host.announce.witnessed(m, snap, a.firstWords))
   }
 
   return {
