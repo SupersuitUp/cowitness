@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { StreakStrip } from './streak-strip.js'
 import type { SnapRow } from '../format.js'
+import { clientConfig, configure } from './config.js'
 
 const NAMES = { ana: 'Ana', ben: 'Ben' }
 const at = (d: number) => new Date(2026, 8, d, 12).toISOString()
@@ -27,4 +28,28 @@ describe('StreakStrip', () => {
     render(<StreakStrip rows={[]} me="ben" names={NAMES} />)
     expect(screen.getByText('Share a snap today to start a streak.')).toBeInTheDocument()
   })
+})
+
+describe('StreakStrip, household', () => {
+  const household = (fn: () => void) => {
+    const before = clientConfig()
+    configure({ ...before, features: { streak: { kind: 'household', timeZone: 'America/Los_Angeles', since: '2026-09-01', freeSkipsPerWeek: 1 } } })
+    try {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-01T20:00:00Z'))
+      fn()
+    } finally { vi.useRealTimers(); configure(before) }
+  }
+  const hrow = (createdAt: string): SnapRow => ({ id: createdAt, by: 'ana', caption: '', kind: 'photo', thumbUrl: null, durationSec: null, createdAt, witnessedAt: null, hidden: false })
+  it('shows one count for everyone who shares, and the free skip', () => household(() => {
+    render(<StreakStrip me="ana" names={{ ana: 'Ana', ben: 'Ben' }} rows={[hrow('2026-10-01T18:00:00Z'), hrow('2026-09-29T18:00:00Z')]} />)
+    // Shared on the 1st and on the 29th: the 30th is that week's free skip, so the count is 2.
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText(/One free skip used this week/)).toBeInTheDocument()
+    expect(screen.queryByText('Together')).toBeNull()
+  }))
+  it('a person who only witnesses sees the count without being asked to share', () => household(() => {
+    render(<StreakStrip me="cy" names={{ ana: 'Ana', cy: 'Cy' }} shares={false} rows={[hrow('2026-10-01T18:00:00Z')]} />)
+    expect(screen.getByText('1')).toBeInTheDocument()
+    expect(screen.queryByText(/Share something|was shared today|free skip/)).toBeNull()
+  }))
 })

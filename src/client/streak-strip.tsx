@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import type { Member, MemberNames } from '../types.js'
 import type { SnapRow } from '../format.js'
-import { streaksOf, type Streak } from '../streak.js'
+import { householdStreakOf, streaksOf, type Streak } from '../streak.js'
+import { clientFeatures } from './config.js'
 import { ACCENT_TINT, HAIRLINE, INK, MUTED, SERIF } from './theme.js'
 import { otherIn } from './people.js'
 
@@ -23,10 +24,27 @@ function Pill({ label, s }: { label: string; s: Streak }) {
 // Days in a row each of you shared a snap, and days in a row you both did. A streak whose owner
 // has not shared yet today is faded: still alive, ends at midnight. Rendered only after mount,
 // because a day is the phone's local day and the server render would count in its own zone.
-export function StreakStrip({ rows, me, names }: { rows: SnapRow[]; me: Member; names: MemberNames }) {
+// The household streak is one count for everyone who shares, in the app's own time zone; a person
+// who does not share (`shares` false) sees the count and is never asked to share.
+export function StreakStrip({ rows, me, names, shares = true }: { rows: SnapRow[]; me: Member; names: MemberNames; shares?: boolean }) {
+  const rule = clientFeatures().streak
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => setNow(new Date()), [])
   if (!now) return null
+  if (rule.kind === 'household') {
+    const h = householdStreakOf(rows, now, rule)
+    return (
+      <section aria-label="Streak" className="px-4">
+        <ul className="flex gap-2"><Pill label="Days in a row" s={{ count: h.count, postedToday: h.capturedToday }} /></ul>
+        {shares && (
+          <p className="mt-2 text-center text-[14px]" style={{ color: MUTED, fontFamily: SERIF }}>
+            {h.capturedToday ? 'Something was shared today.' : h.count > 0 ? `Share something today to keep the ${h.count}-day streak.` : 'Share something today to start a streak.'}
+            {h.skipUsedThisWeek ? ' One free skip used this week.' : ''}
+          </p>
+        )}
+      </section>
+    )
+  }
   const s = streaksOf(rows, now, Object.keys(names))
   const other: Member = otherIn(names, me)
   const mine = s[me]

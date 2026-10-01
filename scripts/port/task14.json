@@ -342,6 +342,16 @@
   ],
   "diverged": [
     "src/client/add-snap.tsx",
-    "src/client/add-snap.test.tsx"
+    "src/client/add-snap.test.tsx",
+    "src/client/cowitness-home.tsx",
+    "src/client/cowitness-home.test.tsx",
+    "src/client/snap-detail.tsx",
+    "src/client/snap-detail.test.tsx",
+    "src/client/snaps-archive.tsx",
+    "src/client/snaps-archive.test.tsx",
+    "src/client/streak-strip.tsx",
+    "src/client/streak-strip.test.tsx",
+    "src/client/witness-session.tsx",
+    "src/client/witness-session.test.tsx"
   ]
 }

@@ -3,7 +3,9 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const refresh = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
-vi.mock('./add-snap.js', () => ({ AddSnap: () => <button type="button">Add a snap</button> }))
+vi.mock('./add-snap.js', () => ({ AddSnap: ({ shares }: { shares?: boolean }) => <button type="button" data-shares={String(shares)}>Add a snap</button> }))
+const { heldVoice } = vi.hoisted(() => ({ heldVoice: vi.fn(async () => 0) }))
+vi.mock('./voice-snap.js', async (orig) => ({ ...(await orig<typeof import('./voice-snap.js')>()), sendHeldVoiceSnaps: heldVoice }))
 let vault: VaultStore | null = null
 vi.mock('./recording-vault.js', async (orig) => {
   const real = await orig<typeof import('./recording-vault.js')>()
@@ -13,6 +15,8 @@ vi.mock('./recording-vault.js', async (orig) => {
 import { CowitnessHome } from './cowitness-home.js'
 import type { SnapView } from '../types.js'
 import { memoryVault, type VaultStore } from './recording-vault.js'
+import { clientConfig, configure } from './config.js'
+import type { CowitnessFeatures } from '../features.js'
 
 const NAMES = { ana: 'Ana', ben: 'Ben' }
 const q = (id: string): SnapView => ({
@@ -88,5 +92,56 @@ describe('CowitnessHome', () => {
       vault = null
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('CowitnessHome for someone who only witnesses', () => {
+  it('has no share buttons and still walks the queue', () => {
+    render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a')]} me="cy" names={{ ...NAMES, cy: 'Cy' }} can={{ share: false, witness: true }} />)
+    expect(screen.queryByRole('button', { name: 'Add a snap' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Witness (1)' })).toBeInTheDocument()
+  })
+  it('says nothing about waiting to someone who only shares', () => {
+    render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} can={{ share: true, witness: false }} />)
+    expect(screen.queryByText('Nothing waiting for you.')).toBeNull()
+  })
+})
+
+describe('CowitnessHome with options', () => {
+  const withFeatures = async (features: Partial<CowitnessFeatures>, fn: () => Promise<void> | void) => {
+    const before = clientConfig()
+    configure({ ...before, features })
+    try { await fn() } finally { configure(before) }
+  }
+  it('tells the share sheet whether this person shares, from what the app says they may do', () => {
+    const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} can={{ share: true, witness: false }} />)
+    expect(screen.getByRole('button', { name: 'Add a snap' })).toHaveAttribute('data-shares', 'true')
+    unmount()
+    render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
+    expect(screen.getByRole('button', { name: 'Add a snap' })).toHaveAttribute('data-shares', 'true')
+  })
+  it('the household streak asks only a person who shares to share', () => withFeatures(
+    { streak: { kind: 'household', timeZone: 'America/Los_Angeles', since: '2026-09-01', freeSkipsPerWeek: 1 } },
+    async () => {
+      const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
+      expect(await screen.findByText(/Share something today/)).toBeInTheDocument()
+      unmount()
+      render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a')]} me="cy" names={{ ...NAMES, cy: 'Cy' }} can={{ share: false, witness: true }} />)
+      expect(await screen.findByRole('region', { name: 'Streak' })).toBeInTheDocument()
+      expect(screen.queryByText(/Share something today/)).toBeNull()
+    },
+  ))
+  it('sends held voice notes only when voice snaps are on, and says in one line when one was let go', async () => {
+    render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
+    expect(heldVoice).not.toHaveBeenCalled()
+    await withFeatures({ voiceSnaps: true }, async () => {
+      heldVoice.mockImplementationOnce(async (_v: unknown, _send: unknown, onDropped?: (d: { id: string; caption: string; status: number }) => void) => {
+        onDropped?.({ id: 'n1', caption: '', status: 403 })
+        return 0
+      })
+      render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
+      expect(await screen.findByRole('status')).toHaveTextContent('A voice note could not be sent and was let go.')
+      expect(heldVoice).toHaveBeenCalledTimes(1)
+    })
   })
 })

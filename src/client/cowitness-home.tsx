@@ -4,7 +4,7 @@ import { clientConfig } from './config.js'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Member, MemberNames } from '../types.js'
+import type { Member, MemberNames, TagChoice } from '../types.js'
 import type { SnapView } from '../types.js'
 import type { SnapRow } from '../format.js'
 import { AddSnap } from './add-snap.js'
@@ -14,6 +14,8 @@ import { WitnessSession } from './witness-session.js'
 import { SESSION_MIC_CONSTRAINTS } from './recorder.js'
 import { analyserListener, newAudioContext } from './mic-level.js'
 import { sendHeld } from './reaction-send.js'
+import { sendHeldVoiceSnaps } from './voice-snap.js'
+import { clientFeatures } from './config.js'
 import { indexedDbVault, memoryVault } from './recording-vault.js'
 import { ACCENT, MUTED, ON_INK, SERIF } from './theme.js'
 
@@ -21,11 +23,16 @@ import { ACCENT, MUTED, ON_INK, SERIF } from './theme.js'
 // is still open. Witnessed snaps live on their own shelf, one link away. The session opens over this page as a history layer, and the tap on Witness is the
 // user gesture it starts from: the microphone is asked for inside `witness`, in that same tap,
 // because a phone only grants it there.
-export function CowitnessHome({ rows, streak, witnessed, queue, me, names }: {
+// `can` is what the app says this person may do: someone who only witnesses is offered no share
+// sheet and is never asked to share, and someone who only shares is not told what is waiting.
+export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can = { share: true, witness: true }, tagChoices, languages }: {
   rows: SnapRow[]; streak: SnapRow[]; witnessed: number; queue: SnapView[]; me: Member; names: MemberNames
+  can?: { share: boolean; witness: boolean }; tagChoices?: TagChoice[]; languages?: readonly string[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  // A held voice note the server refused for good is let go; the person is told once, in one line.
+  const [dropped, setDropped] = useState(false)
   const [mic, setMic] = useState<{ stream: Promise<MediaStream>; ctx: AudioContext | null } | null>(null)
 
   // A reaction an earlier visit could not send (a dropped connection, the app closed mid-send)
@@ -35,7 +42,9 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names }: {
   useEffect(() => {
     if (sentHeld.current) return
     sentHeld.current = true
-    void sendHeld(indexedDbVault() ?? memoryVault()).catch(() => {})
+    const v = indexedDbVault() ?? memoryVault()
+    void sendHeld(v).catch(() => {})
+    if (clientFeatures().voiceSnaps) void sendHeldVoiceSnaps(v, undefined, () => setDropped(true)).catch(() => {})
   }, [])
 
   // Everything that needs the user's gesture happens inside this tap: the microphone permission
@@ -69,7 +78,7 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names }: {
   }
   return (
     <>
-      <div className="mb-4"><StreakStrip rows={streak} me={me} names={names} /></div>
+      <div className="mb-4"><StreakStrip rows={streak} me={me} names={names} shares={can.share} /></div>
       <div className="px-4">
         {queue.length > 0 ? (
           <button
@@ -80,11 +89,12 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names }: {
           >
             Witness ({queue.length})
           </button>
-        ) : (
+        ) : can.witness ? (
           <p className="py-2 text-center text-[15px]" style={{ color: MUTED, fontFamily: SERIF }}>Nothing waiting for you.</p>
-        )}
+        ) : null}
       </div>
-      <div className="mt-4"><AddSnap /></div>
+      {dropped && <p role="status" className="mt-2 px-4 text-center text-sm" style={{ color: MUTED }}>A voice note could not be sent and was let go.</p>}
+      {can.share && <div className="mt-4"><AddSnap tagChoices={tagChoices} languages={languages} shares={can.share} /></div>}
       <div className="mt-6">
         <SnapsArchive rows={rows} me={me} names={names} empty={witnessed > 0 ? 'All caught up.' : undefined} />
       </div>

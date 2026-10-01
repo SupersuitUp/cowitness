@@ -502,3 +502,24 @@ describe('WitnessSession, with the microphone', () => {
     expect(witnessCalls('a')).toHaveLength(1)
   })
 })
+
+describe('WitnessSession with a voice snap', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}')))
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve())
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+  })
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+  it('plays the recording with its words, and offers the reader nothing it could not do', () => {
+    const v = snap('a', {
+      kind: 'voice', caption: '', thumbUrl: null, displayUrl: null, audioUrl: 'https://img/a',
+      voice: { path: 'p', contentType: 'audio/mp4', durationSec: 9, text: 'hello there' },
+    })
+    render(<WitnessSession queue={[v]} me="ana" names={NAMES} onClose={() => {}} />)
+    expect(document.querySelector('audio')).toHaveAttribute('src', 'https://img/a')
+    expect(screen.getByText('hello there')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Transcribe again' })).toBeNull()
+  })
+})

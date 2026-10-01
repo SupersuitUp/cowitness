@@ -220,3 +220,40 @@ describe('SnapDetail', () => {
     vi.useRealTimers()
   })
 })
+
+describe('SnapDetail with options', () => {
+  const voice = (o: Partial<SnapView> = {}): SnapView => ({
+    id: 'v1', by: 'ana', caption: '', kind: 'voice', takenAt: 'x', width: 0, height: 0, paths: { original: '', display: '', thumb: '' },
+    voice: { path: 'p', contentType: 'audio/mp4', durationSec: 9, text: 'hello there' }, audioUrl: 'https://img/a',
+    witnessedAt: '2026-09-30T10:00:00.000Z', witnessedBy: { cy: '2026-09-30T10:00:00.000Z' }, hiddenAt: null,
+    createdAt: '2026-09-30T09:00:00.000Z', thumbUrl: null, displayUrl: null, ...o,
+  })
+  const THREE = { ana: 'Ana', ben: 'Ben', cy: 'Cy' }
+  it('plays a voice snap with its words, and lists everyone who has seen it', () => {
+    render(<SnapDetail me="ana" names={THREE} snap={voice()} />)
+    expect(document.querySelector('audio')).toHaveAttribute('src', 'https://img/a')
+    expect(screen.getByText('hello there')).toBeInTheDocument()
+    expect(screen.getByText(/Seen by Cy/)).toBeInTheDocument()
+  })
+  it('the voice player knows who is looking: its author is offered the words again, anyone else is not', () => {
+    const { unmount } = render(<SnapDetail me="ana" names={THREE} snap={voice()} />)
+    expect(screen.getByRole('button', { name: 'Transcribe again' })).toBeInTheDocument()
+    unmount()
+    render(<SnapDetail me="cy" names={THREE} snap={voice()} />)
+    expect(screen.queryByRole('button', { name: 'Transcribe again' })).toBeNull()
+  })
+  it('names each witness in the order they saw it, and never the people who only read the first seen', () => {
+    render(<SnapDetail me="ana" names={THREE} snap={snap({ by: 'ana', witnessedAt: '2026-09-30T10:00:00.000Z', witnessedBy: { cy: '2026-09-30T11:00:00.000Z', ben: '2026-09-30T10:00:00.000Z' } })} />)
+    expect(screen.getByText(/· Seen by Ben, Cy$/)).toBeInTheDocument()
+    expect(screen.queryByText(/Witnessed by/)).toBeNull()
+  })
+  it('a person who did not share it is shown no seen at all', () => {
+    render(<SnapDetail me="ben" names={THREE} snap={snap({ by: 'ana', witnessedAt: '2026-09-30T10:00:00.000Z', witnessedBy: { cy: '2026-09-30T10:00:00.000Z' } })} />)
+    expect(screen.queryByText(/Seen by|Witnessed by/)).toBeNull()
+  })
+  it('says "just us" and names its tags', () => {
+    render(<SnapDetail me="ana" names={NAMES} tagLabels={{ 't-first': 'First', 't-second': 'Second' }} snap={snap({ by: 'ana', justUs: true, tags: ['t-first', 't-second'] })} />)
+    expect(screen.getByText('Just us')).toBeInTheDocument()
+    expect(screen.getByText('First, Second')).toBeInTheDocument()
+  })
+})

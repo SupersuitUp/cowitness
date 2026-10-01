@@ -9,6 +9,7 @@ import { formatWhen } from './format-when.js'
 import { noPosterBg } from './video-mark.js'
 import { HAIRLINE, INK, MUTED, SERIF } from './theme.js'
 import { otherIn } from './people.js'
+import { VoiceMedia } from './voice-media.js'
 
 // The optimistic transcribing recording carries none of a previous attempt's leftovers: an old
 // reason would be meaningless once it is transcribing again, and an old startedAt would make it
@@ -20,7 +21,9 @@ function startTranscribing(rec: Recording, now: string): Recording {
 
 // One snap: the photo or video, its caption, who shared it and when, and every message under
 // it. The member who shared it can hide it (and bring it back); nobody can delete it.
-export function SnapDetail({ snap, me, names }: { snap: SnapView; me: Member; names: MemberNames }) {
+// With options on: a voice snap plays with its words, "just us" and tags are named, and where each
+// witness has their own seen, the person who shared it is told who has seen it, in that order.
+export function SnapDetail({ snap, me, names, tagLabels }: { snap: SnapView; me: Member; names: MemberNames; tagLabels?: Record<string, string> }) {
   const router = useRouter()
   const [comments, setComments] = useState<Comment[] | undefined>(snap.comments)
   const [retryNote, setRetryNote] = useState<string | null>(null)
@@ -121,16 +124,21 @@ export function SnapDetail({ snap, me, names }: { snap: SnapView; me: Member; na
   return (
     <div className="px-4">
       <div className="overflow-hidden rounded-2xl" style={{ backgroundColor: HAIRLINE }}>
-        {snap.kind === 'video'
+        {snap.kind === 'voice'
+          ? <VoiceMedia snap={snap} me={me} />
+          : snap.kind === 'video'
           ? <SnapVideo snap={snap} label={`Snap from ${names[snap.by]}`} />
           // eslint-disable-next-line @next/next/no-img-element -- signed, expiring storage URL
           : <img src={snap.displayUrl ?? undefined} alt={`Snap from ${names[snap.by]}`} className="max-h-[70dvh] w-full object-contain" />}
       </div>
       {snap.caption && <p className="mt-3 whitespace-pre-wrap text-[17px] leading-relaxed" style={{ color: INK, fontFamily: SERIF }}>{snap.caption}</p>}
+      {snap.justUs && <p className="mt-2 text-xs" style={{ color: MUTED }}>Just us</p>}
+      {snap.tags?.length && tagLabels ? <p className="mt-1 text-xs" style={{ color: MUTED }}>{snap.tags.map((t) => tagLabels[t] ?? t).join(', ')}</p> : null}
       <div className="mt-2 flex items-center justify-between">
         <p className="text-xs" style={{ color: MUTED }}>
           {mine ? 'You' : names[snap.by]}{when ? ` · ${when}` : ''}
-          {mine && snap.witnessedAt ? ` · Witnessed by ${names[otherIn(names, me)]}` : ''}
+          {mine && snap.witnessedBy ? ` · Seen by ${seenOrder(snap.witnessedBy).map((k) => names[k] ?? k).join(', ')}` : ''}
+          {mine && !snap.witnessedBy && snap.witnessedAt ? ` · Witnessed by ${names[otherIn(names, me)]}` : ''}
         </p>
         {mine && (
           <button type="button" disabled={busy} onClick={() => setHidden(!hidden)} className="h-11 px-2 text-sm underline underline-offset-2 disabled:opacity-40" style={{ color: MUTED }}>
@@ -148,6 +156,10 @@ export function SnapDetail({ snap, me, names }: { snap: SnapView; me: Member; na
     </div>
   )
 }
+
+// Each witness's own seen, first seen first.
+const seenOrder = (by: Partial<Record<string, string>>) =>
+  Object.entries(by).filter((e): e is [string, string] => typeof e[1] === 'string').sort((a, b) => a[1].localeCompare(b[1])).map(([k]) => k)
 
 function SnapVideo({ snap, label }: { snap: SnapView; label: string }) {
   const ref = useRef<HTMLVideoElement>(null)

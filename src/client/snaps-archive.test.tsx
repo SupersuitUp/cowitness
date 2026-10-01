@@ -52,3 +52,24 @@ describe('SnapsArchive', () => {
     expect(screen.getAllByText('Witnessed')).toHaveLength(1)
   })
 })
+
+describe('SnapsArchive with options', () => {
+  it('draws a voice snap as its first words, marks "just us", and names a tag', () => {
+    render(<SnapsArchive me="ana" names={{ ana: 'Ana', ben: 'Ben' }} tagLabels={{ 't-first': 'First' }} rows={[
+      { id: 'v1', by: 'ana', caption: '', kind: 'voice', thumbUrl: null, durationSec: 9, createdAt: '2026-09-30T09:00:00.000Z', witnessedAt: null, hidden: false, words: 'tavo merin solut', justUs: true, tags: ['t-first'] },
+    ]} />)
+    expect(screen.getByText('tavo merin solut')).toBeInTheDocument()
+    expect(screen.getByLabelText('Just us')).toBeInTheDocument()
+    expect(screen.getByText('First')).toBeInTheDocument()
+  })
+  it('a voice snap whose words have not come yet says it is a voice note', () => {
+    render(<SnapsArchive me="ana" names={NAMES} rows={[row({ kind: 'voice', thumbUrl: null, words: '' })]} />)
+    expect(screen.getByText('Voice note')).toBeInTheDocument()
+  })
+  it('an old row, and tags with no labels given, draw nothing new', () => {
+    const { container } = render(<SnapsArchive me="ana" names={NAMES} rows={[row({ tags: ['t-first'] })]} />)
+    expect(screen.queryByText('t-first')).toBeNull()
+    expect(screen.queryByLabelText('Just us')).toBeNull()
+    expect(container.querySelectorAll('p')).toHaveLength(1)
+  })
+})

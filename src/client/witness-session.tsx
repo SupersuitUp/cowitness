@@ -19,6 +19,7 @@ import {
   beginRecording, endRecording, forget, indexedDbVault, keepChunk, memoryVault, newRecordingId, type VaultStore,
 } from './recording-vault.js'
 import { ACCENT, ACCENT_SOFT, SERIF } from './theme.js'
+import { VoiceMedia } from './voice-media.js'
 
 interface Props {
   queue: SnapView[]; me: Member; names: MemberNames; onClose(): void
@@ -47,7 +48,7 @@ const STOP_GIVE_UP_MS = 3000
 // With a microphone, each snap gets its own recording on the session's one stream, kept on the
 // phone chunk by chunk as it is made. Next sends it in the background when something was said
 // and lets it go when nothing was; the witness itself never waits on the upload.
-export function WitnessSession({ queue, names, onClose, mic, listen }: Props) {
+export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props) {
   // The queue as it was when the session opened. A router.refresh() underneath would drop the
   // snaps just witnessed and shift every index, so the session walks its own copy.
   const [items] = useState(() => queue)
@@ -338,7 +339,9 @@ export function WitnessSession({ queue, names, onClose, mic, listen }: Props) {
               if (start !== null && end !== undefined && isSwipeUp(start, end)) void next()
             }}
           >
-            {snap.kind === 'video'
+            {snap.kind === 'voice'
+              ? <div key={snap.id} className="w-full"><VoiceMedia snap={snap} me={me} /></div>
+              : snap.kind === 'video'
               ? <WitnessVideo key={snap.id} snap={snap} label={`Snap from ${names[snap.by]}`} />
               // eslint-disable-next-line @next/next/no-img-element -- signed, expiring storage URL
               : <img key={snap.id} src={snap.displayUrl ?? undefined} alt={`Snap from ${names[snap.by]}`} className="max-h-full max-w-full object-contain" />}
