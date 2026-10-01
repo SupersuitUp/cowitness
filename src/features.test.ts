@@ -19,6 +19,10 @@ describe('resolveFeatures', () => {
     expect(() => resolveFeatures({ streak: { ...household, since: '9/1/2026' } })).toThrow(/since/)
     expect(() => resolveFeatures({ streak: { ...household, freeSkipsPerWeek: 2 as never } })).toThrow(/freeSkipsPerWeek/)
   })
+  it('refuses an option name it does not know, naming it and listing the ones it does', () => {
+    expect(() => resolveFeatures({ justus: true } as never)).toThrow(/justus/)
+    expect(() => resolveFeatures({ justus: true } as never)).toThrow(/witnessing, voiceSnaps, justUs, tags, doubleCamera, prompts, streak/)
+  })
   it('refuses a witnessing kind it does not know', () => {
     expect(() => resolveFeatures({ witnessing: 'everyone' as never })).toThrow(/witnessing/)
   })

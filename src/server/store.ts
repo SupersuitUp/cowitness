@@ -21,11 +21,26 @@ const nowIso = () => new Date().toISOString()
 
 // An option the app turned on without the part it needs would fail on a person's first tap; it
 // fails here instead, when the app starts, naming what is missing.
+// A part that is there but the wrong shape (a host written without types) is refused the same way.
 export function assertHostFits<M extends string>(host: CowitnessHost<M>, f: CowitnessFeatures): void {
   const missing: string[] = []
-  if ((f.witnessing === 'audience' || f.justUs) && !host.people) missing.push('people() (for the audience kind or "just us")')
-  if (f.tags && !host.tags?.list) missing.push('tags.list (for tags)')
-  if (f.prompts && !host.prompts) missing.push('prompts (for capture reminders)')
+  const isFn = (v: unknown) => typeof v === 'function'
+  const isText = (v: unknown) => typeof v === 'string' && v.length > 0
+  if ((f.witnessing === 'audience' || f.justUs) && !isFn(host.people)) missing.push('people() (for the audience kind or "just us")')
+  if (f.tags) {
+    if (!isFn(host.tags?.list)) missing.push('tags.list() (for tags)')
+    const max = host.tags?.max
+    if (max !== undefined && !(Number.isInteger(max) && max > 0)) missing.push('tags.max as a whole number above 0 (for tags)')
+  }
+  if (f.prompts) {
+    const p = host.prompts as Partial<NonNullable<CowitnessHost<M>['prompts']>> | undefined
+    if (!p || typeof p !== 'object') missing.push('prompts (for capture reminders)')
+    else {
+      if (!isText(p.collection)) missing.push('prompts.collection (for capture reminders)')
+      if (!isText(p.timeZone)) missing.push('prompts.timeZone (for capture reminders)')
+      for (const fn of ['people', 'save', 'nudge'] as const) if (!isFn(p[fn])) missing.push(`prompts.${fn}() (for capture reminders)`)
+    }
+  }
   if (missing.length) throw new Error(`cowitness: the host turned on options without ${missing.join(', ')}`)
 }
 

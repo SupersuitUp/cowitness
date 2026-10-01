@@ -33,7 +33,12 @@ function knownZone(tz: string): boolean {
 }
 
 // A wrong setting is the app's mistake, found when the app starts rather than when a person taps.
+// A misspelt option name would leave the option silently off, so it is refused like a wrong value.
+const OPTION_NAMES = Object.keys(DEFAULT_FEATURES) as (keyof CowitnessFeatures)[]
+
 export function resolveFeatures(f: Partial<CowitnessFeatures> = {}): CowitnessFeatures {
+  const unknown = Object.keys(f).filter((k) => !(OPTION_NAMES as string[]).includes(k))
+  if (unknown.length) throw new Error(`cowitness: unknown option ${unknown.join(', ')}; the options are ${OPTION_NAMES.join(', ')}`)
   const set = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)) as Partial<CowitnessFeatures>
   const out: CowitnessFeatures = { ...DEFAULT_FEATURES, ...set }
   if (out.witnessing !== 'each-other' && out.witnessing !== 'audience') throw new Error(`cowitness: witnessing must be each-other or audience, not ${String(out.witnessing)}`)

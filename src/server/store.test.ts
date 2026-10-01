@@ -196,6 +196,26 @@ describe('a host must supply what its options need', () => {
     expect(() => createCowitnessStore({ ...host, features: { prompts: true } })).toThrow(/prompts/)
     expect(() => createCowitnessStore({ ...host, features: { voiceSnaps: true } })).not.toThrow()
   })
+  it('refuses a part that is there but is not the shape its option needs, naming the option and the part', () => {
+    const { host } = fakeHost()
+    const people = async () => []
+    const prompts = { collection: 'prompt-claims', timeZone: 'America/Los_Angeles', people: async () => [], save: async () => {}, nudge: () => {} }
+    expect(() => createCowitnessStore({ ...host, features: { prompts: true }, prompts })).not.toThrow()
+    expect(() => createCowitnessStore({ ...host, features: { witnessing: 'audience' }, people })).not.toThrow()
+    expect(() => createCowitnessStore({ ...host, features: { tags: true }, tags: { list: async () => [] } })).not.toThrow()
+    const bad = (part: Record<string, unknown>) => ({ ...host, ...part }) as never
+    expect(() => createCowitnessStore(bad({ features: { witnessing: 'audience' }, people: [] }))).toThrow(/people\(\).*audience/)
+    expect(() => createCowitnessStore(bad({ features: { justUs: true }, people: 'ana' }))).toThrow(/people\(\)/)
+    expect(() => createCowitnessStore(bad({ features: { tags: true }, tags: { list: [] } }))).toThrow(/tags\.list.*tags/)
+    expect(() => createCowitnessStore(bad({ features: { tags: true }, tags: { list: async () => [], max: 0 } }))).toThrow(/tags\.max/)
+    for (const key of ['people', 'save', 'nudge'] as const) {
+      const { [key]: _gone, ...rest } = prompts
+      expect(() => createCowitnessStore(bad({ features: { prompts: true }, prompts: rest }))).toThrow(new RegExp(`prompts\\.${key}.*capture reminders`))
+      expect(() => createCowitnessStore(bad({ features: { prompts: true }, prompts: { ...prompts, [key]: 'x' } }))).toThrow(new RegExp(`prompts\\.${key}`))
+    }
+    expect(() => createCowitnessStore(bad({ features: { prompts: true }, prompts: { ...prompts, collection: '' } }))).toThrow(/prompts\.collection/)
+    expect(() => createCowitnessStore(bad({ features: { prompts: true }, prompts: { ...prompts, timeZone: 7 } }))).toThrow(/prompts\.timeZone/)
+  })
   it('says which options it runs with', () => {
     expect(createCowitnessStore(fakeHost().host).features.witnessing).toBe('each-other')
   })
