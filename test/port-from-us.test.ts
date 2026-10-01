@@ -170,8 +170,16 @@ describe('port-from-us replace', () => {
   })
 })
 
+// Needs the source checkout at the pinned commit, which CI does not have: it runs wherever the
+// source app is on disk (US_REPO overrides the default location) and is skipped elsewhere.
+const SOURCE = process.env.US_REPO ?? join(process.env.HOME ?? '', 'Documents/github-repos/us-app')
+const pin = (JSON.parse(readFileSync(join(ROOT, 'scripts/port/task13.json'), 'utf8')) as { commit: string }).commit
+const haveSource = (() => {
+  try { execFileSync('git', ['-C', SOURCE, 'cat-file', '-e', `${pin}^{commit}`], { stdio: 'ignore' }); return true } catch { return false }
+})()
+
 describe('the task 13 port', () => {
-  it('reproduces the committed files byte for byte, so the scrub survives a re-port', () => {
+  it.skipIf(!haveSource)('reproduces the committed files byte for byte, so the scrub survives a re-port', () => {
     const out = mkdtempSync(join(tmpdir(), 'rp-'))
     const manifest = JSON.parse(readFileSync(join(ROOT, 'scripts/port/task13.json'), 'utf8')) as { files: { to: string }[] }
     execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), join(ROOT, 'scripts/port/task13.json')], {
