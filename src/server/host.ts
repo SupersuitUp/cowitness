@@ -21,11 +21,24 @@ export interface CowitnessHost<M extends string> {
   /** Called on use, never at import, so building an app needs no credentials. */
   db(): Firestore
   /**
-   * Whether an error is a refusal whose message goes back to a person (the transcriber's stored
-   * reason). This package's own RuleError is always a refusal; an app with refusals of its own
-   * passes a check that ADDS to that, so an error is never shown just because it carries a 4xx status.
+   * Which of the app's OWN errors are refusals whose words go back to a person, as the route's
+   * answer or as a transcriber's stored reason. This package's own RuleError is always a refusal;
+   * this check ADDS to that, so an error is never shown just because it carries a 4xx status. A
+   * refusal answers with its `status` when that is 400-499 (403 when it has none); any other status
+   * is treated as an internal error.
+   *
+   * Pass your pipeline's own refusal check here whenever `media.filePhoto`/`fileVideo` or
+   * `transcription.transcribe` throw refusals of their own. The phone's resend depends on it: a Send
+   * whose first answer was lost files the same id again, and only a 400/403/409 refusal from the
+   * pipeline makes it ask whether the snap was already filed. Left out, that refusal becomes an
+   * opaque 500, the retry fails, the person sends again, and a second snap is filed.
    */
   isRefusal?(err: unknown): boolean
+  /**
+   * Optional: where failures the person must not see are reported, such as an `announce` call that
+   * throws after its snap or comment was saved. Without it those failures are dropped silently.
+   */
+  log?(message: string, err: unknown): void
   /** The list snaps are kept in. */
   collection: string
   /** Where spoken reactions are stored: `${prefix}snaps-audio/<snap>/<id>.<ext>`. */
@@ -35,12 +48,22 @@ export interface CowitnessHost<M extends string> {
     urls(s: Snap<M>): Promise<MediaUrls>
     /** A short-lived read URL for one stored file. */
     signedUrl(path: string): Promise<string>
-    /** The app's photo pipeline, filing an uploaded photo into `into`. */
+    /**
+     * The app's photo pipeline, filing an uploaded photo into `into`. `photoId` comes straight from
+     * the request body and becomes the snap's id, so the package relies on this pipeline to:
+     * check that the upload was issued to `m`; claim it exactly once; and refuse when `into.ref`
+     * already exists. Without those checks a member could file over another member's snap or take
+     * another member's upload. Throw those refusals as errors `isRefusal` recognises.
+     */
     filePhoto(m: M, photoId: string, clientTakenAt: string | undefined, into: Destination<M>): Promise<Omit<Snap<M>, 'id'>>
-    /** The app's video pipeline, filing an uploaded video into `into`. */
+    /** The app's video pipeline, filing an uploaded video into `into`. The same three duties as `filePhoto`. */
     fileVideo(m: M, photoId: string, meta: { durationSec: number; width: number; height: number; takenAt?: string }, into: Destination<M>): Promise<Omit<Snap<M>, 'id'>>
   }
-  /** The four moments. The app decides what each becomes; Cowitness never sends a push itself. */
+  /**
+   * The four moments. The app decides what each becomes; Cowitness never sends a push itself. Each
+   * is called after the write is saved; a throw or a rejected promise goes to `log` and never
+   * changes the route's answer.
+   */
   announce: {
     shared(m: M, s: Snap<M>): void
     witnessed(m: M, s: Snap<M>, firstWords: string): void

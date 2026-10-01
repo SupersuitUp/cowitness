@@ -380,13 +380,33 @@
       "to": "src/client/snap-upload.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "// Refusals a second filing of the same id gets when the first one landed (the ticket is claimed\n// and gone) or when the stored copy can never be filed. Which of the two is settled by asking\n// for the snap itself.\nconst GONE = [\n  'upload not found or expired', 'photo already finalized', 'video already finalized',\n  'video was not uploaded', 'uploaded video does not match the upload',\n]\n",
+          "// A second filing of the same id is refused when the first one landed (the ticket is claimed and\n// gone) or when the stored copy can never be filed. Each app's pipeline words that refusal its own\n// way, so the phone keys on the status alone: on a retry, any 400, 403 or 409 is settled by asking\n// for the snap itself. A refusal that has nothing to do with the id (a caption too long) comes back\n// the same way after the fresh start, so it still reaches the sheet in the server's words.\nconst ASK_WHETHER_FILED = new Set([400, 403, 409])\n"
+        ],
+        [
+          "  if (retry && done.status === 400 && GONE.includes(reason)) {\n",
+          "  if (retry && ASK_WHETHER_FILED.has(done.status)) {\n"
+        ]
+      ]
     },
     {
       "from": "src/app/components/snap-upload.test.ts",
       "to": "src/client/snap-upload.test.ts",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "    it('any other refusal is still an error the sheet can show', async () => {\n",
+          "    // Another app's pipeline words its refusals its own way; the phone keys on the status, never the sentence.\n    for (const status of [400, 403, 409]) {\n      const elsewhere = () => new Response(JSON.stringify({ error: 'that ticket was already used' }), { status })\n\n      it(`a ${status} refusal worded by another app still counts as sent when the snap is found under its id`, async () => {\n        route(elsewhere, () => new Response(JSON.stringify({ id: 'p1' })))\n        await postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })\n        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(['POST /api/us/snaps/photo', 'GET /api/us/snaps/p1'])\n      })\n\n      it(`a ${status} refusal worded by another app starts over from a fresh ticket when the snap is not there`, async () => {\n        let first = true\n        route(() => (first ? ((first = false), elsewhere()) : new Response(JSON.stringify({ id: 'p2' }))))\n        await postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })\n        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([\n          'POST /api/us/snaps/photo', 'GET /api/us/snaps/p1', 'POST /api/us/photos/upload-url', 'PUT https://put/p2', 'POST /api/us/snaps/photo',\n        ])\n      })\n    }\n\n    it('a retry refused with a server error is reported, never looked up', async () => {\n      route(() => new Response(JSON.stringify({ error: 'something went wrong' }), { status: 500 }))\n      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('something went wrong')\n      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo'])\n    })\n\n    it('a retry whose lookup cannot answer reports the refusal, and uploads nothing', async () => {\n      route(() => new Response(JSON.stringify({ error: 'private' }), { status: 403 }), () => new Response(JSON.stringify({ error: 'private' }), { status: 403 }))\n      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('private')\n      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo', '/api/us/snaps/p1'])\n    })\n\n    it('any other refusal is still an error the sheet can show', async () => {\n"
+        ],
+        [
+          "      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('caption must be at most 500 characters')\n      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo'])\n",
+          "      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('caption must be at most 500 characters')\n      // The phone cannot tell this refusal from a gone ticket by its words, so it asks for the snap,\n      // starts over, and the fresh filing is refused in the same words. Nothing is filed.\n      expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([\n        'POST /api/us/snaps/photo', 'GET /api/us/snaps/p1', 'POST /api/us/photos/upload-url', 'PUT https://put/p2', 'POST /api/us/snaps/photo',\n      ])\n"
+        ]
+      ]
     },
     {
       "from": "src/app/components/witness-flow.ts",

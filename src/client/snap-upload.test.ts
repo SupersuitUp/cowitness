@@ -123,10 +123,46 @@ describe('postSnap', () => {
       expect(calls[0].body).toEqual({ photoId: 'v1', caption: '', ...meta, takenAt: '2026-09-27T14:03:00' })
     })
 
+    // Another app's pipeline words its refusals its own way; the phone keys on the status, never the sentence.
+    for (const status of [400, 403, 409]) {
+      const elsewhere = () => new Response(JSON.stringify({ error: 'that ticket was already used' }), { status })
+
+      it(`a ${status} refusal worded by another app still counts as sent when the snap is found under its id`, async () => {
+        route(elsewhere, () => new Response(JSON.stringify({ id: 'p1' })))
+        await postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })
+        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(['POST /api/us/snaps/photo', 'GET /api/us/snaps/p1'])
+      })
+
+      it(`a ${status} refusal worded by another app starts over from a fresh ticket when the snap is not there`, async () => {
+        let first = true
+        route(() => (first ? ((first = false), elsewhere()) : new Response(JSON.stringify({ id: 'p2' }))))
+        await postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })
+        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+          'POST /api/us/snaps/photo', 'GET /api/us/snaps/p1', 'POST /api/us/photos/upload-url', 'PUT https://put/p2', 'POST /api/us/snaps/photo',
+        ])
+      })
+    }
+
+    it('a retry refused with a server error is reported, never looked up', async () => {
+      route(() => new Response(JSON.stringify({ error: 'something went wrong' }), { status: 500 }))
+      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('something went wrong')
+      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo'])
+    })
+
+    it('a retry whose lookup cannot answer reports the refusal, and uploads nothing', async () => {
+      route(() => new Response(JSON.stringify({ error: 'private' }), { status: 403 }), () => new Response(JSON.stringify({ error: 'private' }), { status: 403 }))
+      await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('private')
+      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo', '/api/us/snaps/p1'])
+    })
+
     it('any other refusal is still an error the sheet can show', async () => {
       route(() => new Response(JSON.stringify({ error: 'caption must be at most 500 characters' }), { status: 400 }))
       await expect(postSnap(photo(), 'x', { sent: { kind: 'photo', photoId: 'p1' } })).rejects.toThrow('caption must be at most 500 characters')
-      expect(calls.map((c) => c.url)).toEqual(['/api/us/snaps/photo'])
+      // The phone cannot tell this refusal from a gone ticket by its words, so it asks for the snap,
+      // starts over, and the fresh filing is refused in the same words. Nothing is filed.
+      expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+        'POST /api/us/snaps/photo', 'GET /api/us/snaps/p1', 'POST /api/us/photos/upload-url', 'PUT https://put/p2', 'POST /api/us/snaps/photo',
+      ])
     })
   })
 

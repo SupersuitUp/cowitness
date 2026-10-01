@@ -114,6 +114,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:private-words
+      - run: npm run check:comment-dates
       - run: npm run check:consumer
 
       - name: Refuse a tag that disagrees with package.json

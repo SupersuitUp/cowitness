@@ -24,12 +24,22 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     if (!m) throw new RuleError('private', 403)
     return m
   }
+  // An announcement runs after the write is committed, so its failure must never turn a saved snap
+  // or comment into an error: the phone would send it again and file it twice. A throw, or a
+  // promise that rejects later, goes to the host's log when it has one and is otherwise dropped.
+  const quietly = (what: string, announce: () => unknown) => {
+    const failed = (err: unknown) => { try { host.log?.(`announce ${what} failed`, err) } catch { /* a log that throws is dropped too */ } }
+    try {
+      const r = announce() as { then?: unknown } | undefined
+      if (r && typeof r.then === 'function') (r as Promise<unknown>).then(undefined, failed)
+    } catch (err) { failed(err) }
+  }
   const tell = (m: M, snap: Snap<M>, patch: SnapPatch, now: string) => {
     const a = announcementOf(m, snap, patch, now)
     if (!a) return
-    if (a.kind === 'message') host.announce.message(m, snap, a.comment)
-    else if (a.kind === 'heart') host.announce.heart(m, snap, a.comment)
-    else host.announce.witnessed(m, snap, a.firstWords)
+    if (a.kind === 'message') quietly('message', () => host.announce.message(m, snap, a.comment))
+    else if (a.kind === 'heart') quietly('heart', () => host.announce.heart(m, snap, a.comment))
+    else quietly('witnessed', () => host.announce.witnessed(m, snap, a.firstWords))
   }
 
   return {
@@ -43,7 +53,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         const m = await signedIn(req)
         const { photoId, caption, clientTakenAt } = parseSnapPhotoBody(await req.json())
         const snap = await store.finalizeSnapPhoto(m, photoId, { caption, clientTakenAt })
-        host.announce.shared(m, snap)
+        quietly('shared', () => host.announce.shared(m, snap))
         return Response.json(snap)
       }),
     },
@@ -53,7 +63,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         const m = await signedIn(req)
         const { photoId, caption, meta } = parseSnapVideoBody(await req.json())
         const snap = await store.finalizeSnapVideo(m, photoId, { caption, meta })
-        host.announce.shared(m, snap)
+        quietly('shared', () => host.announce.shared(m, snap))
         return Response.json(snap)
       }),
     },

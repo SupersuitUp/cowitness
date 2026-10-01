@@ -32,7 +32,8 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
 
 ## The host (server)
 
-`CowitnessHost<M>` in `src/server/host.ts` documents every member. In short:
+The `CowitnessHost<M>` type, exported from `@supersuit/cowitness/server`, documents every member in
+its JSDoc. In short:
 
 - `member(req)` says who is asking, or `null`. **The host enforces membership**: the package asks
   who the caller is and acts for that member, but it never decides who may use the feature at all.
@@ -50,7 +51,33 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
 - Optional `isRefusal(err)`. A refusal is an error whose words reach the phone. The package's own
   rule errors are always refusals; `isRefusal` **adds** to them and never replaces them, so an
   app lists only its own. An error that is not a refusal never has its words sent to the phone,
-  whatever status it carries.
+  whatever status it carries. A refusal answers with its `status` when that is 400-499, and 403
+  when it has none; any other status is treated as an internal error (logged, opaque 500).
+- Optional `log(message, err)`: where failures the person must not see are reported, such as an
+  `announce` call that throws after its snap or comment was saved. That failure never changes the
+  route's answer; without `log` it is dropped.
+
+### What the host is responsible for
+
+The package hands three security decisions to the host, and cannot check them for you.
+
+- **`member` turns away anyone who is not a member.** See above.
+- **`media.filePhoto` and `media.fileVideo` guard the upload.** The `photoId` a phone sends comes
+  straight from the request body and becomes the snap's id, so the pipeline must:
+  - check that the upload was issued to the member `m` it is filing for;
+  - claim it exactly once;
+  - refuse when `into.ref` already exists.
+
+  Without those checks a member could file over another member's snap, or take another member's
+  upload.
+- **Your pipeline's refusals must reach the phone, so pass them as `isRefusal`.** If
+  `media.filePhoto`, `media.fileVideo` or `transcription.transcribe` throw refusals of your own
+  (an expired or already-claimed upload, a transcriber's readable reason), list them in
+  `isRefusal`. The phone's resend depends on it. A Send whose first answer was lost files the same
+  id again, and a 400, 403 or 409 from your pipeline is what makes the phone ask whether the snap
+  was already filed. If `isRefusal` leaves them out, that refusal becomes an opaque 500 and the
+  retry fails. The person then sends again, and a second snap is filed. The wording is yours; the
+  phone reads only the status.
 
 ## Mounting the handlers
 
@@ -90,6 +117,18 @@ mounted its routes or what it calls things, so a missing value is a wrong addres
 | `uploadUrls.photo`, `uploadUrls.video` | The app's own upload-ticket routes, which a snap's bytes travel through. |
 | `vaultName` | The IndexedDB database spoken reactions wait in until the server has them. An app that held recordings before it used this package passes the name it always used. |
 | `renderThread` | Draws the conversation under a snap, so messages look like every other conversation in the app. |
+
+`renderThread` is given `ThreadSlotProps`:
+
+| Prop | What it is |
+|---|---|
+| `snapId` | The snap the conversation belongs to. |
+| `me` | The member key of the person looking. |
+| `names` | Each member key's display name. |
+| `comments` | The snap's conversation as the server last sent it, or `undefined` when it has none. |
+| `onSent(next)` | Call with the server's conversation after a send lands, so the snap shows it. |
+| `audioSrc(c)` | Where a message's recording plays from, or `null` when it has none. |
+| `onRetranscribe(commentId)` | Call to transcribe a message's recording again, with no re-recording. |
 
 **Theme: every token.** A token left out keeps a neutral default.
 

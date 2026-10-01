@@ -21,13 +21,12 @@ export interface SnapOptions {
   onSent?(sent: SentSnap): void
 }
 
-// Refusals a second filing of the same id gets when the first one landed (the ticket is claimed
-// and gone) or when the stored copy can never be filed. Which of the two is settled by asking
-// for the snap itself.
-const GONE = [
-  'upload not found or expired', 'photo already finalized', 'video already finalized',
-  'video was not uploaded', 'uploaded video does not match the upload',
-]
+// A second filing of the same id is refused when the first one landed (the ticket is claimed and
+// gone) or when the stored copy can never be filed. Each app's pipeline words that refusal its own
+// way, so the phone keys on the status alone: on a retry, any 400, 403 or 409 is settled by asking
+// for the snap itself. A refusal that has nothing to do with the id (a caption too long) comes back
+// the same way after the fresh start, so it still reaches the sheet in the server's words.
+const ASK_WHETHER_FILED = new Set([400, 403, 409])
 
 // One snap, start to finish. The bytes travel exactly as an album photo's or video's do (the
 // same tickets, the same keys); only the filing call differs, because a snap is in no moment.
@@ -71,7 +70,7 @@ async function fileSnap(file: File, caption: string, sent: SentSnap, retry: bool
     })
   if (done.ok) return 'filed'
   const reason = await refusal(done)
-  if (retry && done.status === 400 && GONE.includes(reason)) {
+  if (retry && ASK_WHETHER_FILED.has(done.status)) {
     const found = await fetch(`${clientConfig().apiBase}/${sent.photoId}`).catch(() => null)
     if (found?.ok) return 'filed'
     if (found?.status === 404) return 'gone'

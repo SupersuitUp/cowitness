@@ -261,3 +261,90 @@ describe('a host that says which of its own errors are refusals (the main host a
     spy.mockRestore()
   })
 })
+
+describe('the status a refusal answers with', () => {
+  beforeEach(() => { vi.clearAllMocks(); requireMember.mockResolvedValue('ben') })
+  class Refusal extends Error { constructor(m: string, public status?: unknown) { super(m) } }
+  const hooked = createCowitnessHandlers({ ...host, isRefusal: (e: unknown) => e instanceof Refusal } as CowitnessHost<M>, store as unknown as CowitnessStore<M>)
+
+  it('a refusal with no status answers 403 with its words', async () => {
+    mocked.finalizeSnapPhoto.mockRejectedValue(new Refusal('not yours to file'))
+    const res = await hooked.photo.POST(json('POST', { photoId: 'p1' }))
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: 'not yours to file' })
+  })
+
+  it('honours any status from 400 to 499', async () => {
+    for (const status of [400, 409, 499]) {
+      mocked.finalizeSnapPhoto.mockRejectedValue(new Refusal('refused', status))
+      expect((await hooked.photo.POST(json('POST', { photoId: 'p1' }))).status).toBe(status)
+    }
+  })
+
+  for (const status of [0, 200, 302, 399, 500, 503, 600, 401.5, Number.NaN, '400']) {
+    it(`a refusal claiming status ${String(status)} is an internal error: logged, opaque 500`, async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mocked.finalizeSnapPhoto.mockRejectedValue(new Refusal('refused', status))
+      const res = await hooked.photo.POST(json('POST', { photoId: 'p1' }))
+      expect(res.status).toBe(500)
+      await expect(res.json()).resolves.toEqual({ error: 'something went wrong' })
+      expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
+    })
+  }
+})
+
+describe('an announcement that fails after the write is saved', () => {
+  beforeEach(() => { vi.clearAllMocks(); requireMember.mockResolvedValue('ben') })
+  const boom = () => { throw new Error('push service down') }
+  const rejects = () => Promise.reject(new Error('push service down'))
+  const failing = (fail: () => unknown, log?: (message: string, err: unknown) => void) => createCowitnessHandlers({
+    ...host, log, announce: { shared: fail, witnessed: fail, message: fail, heart: fail },
+  } as unknown as CowitnessHost<M>, store as unknown as CowitnessStore<M>)
+
+  it('a photo or video snap still answers 200 with the snap, and the failure goes to the host log', async () => {
+    const log = vi.fn()
+    const h2 = failing(boom, log)
+    mocked.finalizeSnapPhoto.mockResolvedValue({ id: 'p1', by: 'ben', kind: 'photo' } as never)
+    const photo = await h2.photo.POST(json('POST', { photoId: 'p1' }))
+    expect(photo.status).toBe(200)
+    await expect(photo.json()).resolves.toMatchObject({ id: 'p1' })
+    mocked.finalizeSnapVideo.mockResolvedValue({ id: 'v1', by: 'ben', kind: 'video' } as never)
+    const video = await h2.video.POST(json('POST', { photoId: 'v1', durationSec: 3, width: 720, height: 1280 }))
+    expect(video.status).toBe(200)
+    expect(log).toHaveBeenCalledTimes(2)
+    expect(log).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ message: 'push service down' }))
+  })
+
+  it('a typed message still answers 200 with the snap, so the phone never sends it twice', async () => {
+    const now = new Date().toISOString()
+    mocked.patchSnap.mockImplementation(async () => ({
+      id: 's1', by: 'ana', kind: 'photo', comments: [{ id: 'c1', by: 'ben', text: 'lovely', at: now }],
+    }) as never)
+    const res = await failing(boom).snap.PATCH(json('PATCH', { kind: 'comment', text: 'lovely' }), { params })
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ id: 's1' })
+  })
+
+  it('an announcement that rejects later is caught too, and with no host log it is swallowed', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    mocked.finalizeSnapPhoto.mockResolvedValue({ id: 'p1', by: 'ben', kind: 'photo' } as never)
+    const res = await failing(rejects).photo.POST(json('POST', { photoId: 'p1' }))
+    expect(res.status).toBe(200)
+    await new Promise((r) => setTimeout(r, 10))
+    process.off('unhandledRejection', unhandled)
+    expect(unhandled).not.toHaveBeenCalled()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('an async announcement that rejects reaches the host log', async () => {
+    const log = vi.fn()
+    mocked.finalizeSnapPhoto.mockResolvedValue({ id: 'p1', by: 'ben', kind: 'photo' } as never)
+    expect((await failing(rejects, log).photo.POST(json('POST', { photoId: 'p1' }))).status).toBe(200)
+    await new Promise((r) => setTimeout(r, 10))
+    expect(log).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ message: 'push service down' }))
+  })
+})
