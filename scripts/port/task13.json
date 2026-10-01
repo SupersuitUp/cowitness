@@ -1,0 +1,273 @@
+{
+  "commit": "7e65c60a9cff94c5831978cdf36c73912de6ee7b",
+  "maps": {
+    "client": {
+      "@/lib/us/members": "../types.js",
+      "@/lib/us/types": "../types.js",
+      "@/lib/us/rules": "../shared-rules.js",
+      "@/lib/us/snap-rules": "../snap-rules.js",
+      "@/lib/us/exif-date": "../../test/support/exif-date.js",
+      "../theme": "./theme.js",
+      "./upload-queue": "./upload.js",
+      "./video-upload": "./upload.js",
+      "./notes-format": "./group-by-day.js",
+      "./photo-view": "./format-duration.js",
+      "./thread": "./format-when.js",
+      "./cowitness-format": "../format.js",
+      "./streak": "../streak.js"
+    },
+    "support": {}
+  },
+  "renames": {
+    "NOTE_MAX": "MESSAGE_MAX"
+  },
+  "urls": [
+    [
+      "`/api/us/snaps",
+      "`${clientConfig().apiBase}"
+    ],
+    [
+      "'/api/us/snaps/photo'",
+      "`${clientConfig().apiBase}/photo`"
+    ],
+    [
+      "'/api/us/snaps/video'",
+      "`${clientConfig().apiBase}/video`"
+    ],
+    [
+      "'/api/us/photos/upload-url'",
+      "clientConfig().uploadUrls.photo"
+    ],
+    [
+      "router.push('/cowitness')",
+      "router.push(clientConfig().pageBase)"
+    ],
+    [
+      "href=\"/cowitness/witnessed\"",
+      "href={`${clientConfig().pageBase}/witnessed`}"
+    ],
+    [
+      "`/cowitness/",
+      "`${clientConfig().pageBase}/"
+    ]
+  ],
+  "configImport": "import { clientConfig } from './config.js'",
+  "files": [
+    {
+      "from": "src/app/components/recorder.ts",
+      "to": "src/client/recorder.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/recorder.test.ts",
+      "to": "src/client/recorder.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/speech.ts",
+      "to": "src/client/speech.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/speech.test.ts",
+      "to": "src/client/speech.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/mic-level.ts",
+      "to": "src/client/mic-level.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/hearing.ts",
+      "to": "src/client/hearing.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/hearing.test.ts",
+      "to": "src/client/hearing.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/recording-vault.ts",
+      "to": "src/client/recording-vault.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/recording-vault.test.ts",
+      "to": "src/client/recording-vault.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/reaction-send.ts",
+      "to": "src/client/reaction-send.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/reaction-send.test.ts",
+      "to": "src/client/reaction-send.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/dual-camera.ts",
+      "to": "src/client/dual-camera.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/dual-camera.test.ts",
+      "to": "src/client/dual-camera.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/snap-frames.ts",
+      "to": "src/client/snap-frames.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/snap-frames.test.ts",
+      "to": "src/client/snap-frames.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/snap-compose.ts",
+      "to": "src/client/snap-compose.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/snap-compose.test.ts",
+      "to": "src/client/snap-compose.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/reencode.ts",
+      "to": "src/client/reencode.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/reencode.test.ts",
+      "to": "src/client/reencode.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/upright.ts",
+      "to": "src/client/upright.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/upright.test.ts",
+      "to": "src/client/upright.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/history-layer.ts",
+      "to": "src/client/history-layer.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/history-layer.test.tsx",
+      "to": "src/client/history-layer.test.tsx",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/video-meta.ts",
+      "to": "src/client/video-meta.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/video-meta.test.ts",
+      "to": "src/client/video-meta.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/photo-date.ts",
+      "to": "src/client/photo-date.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/photo-date.test.ts",
+      "to": "src/client/photo-date.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/snap-upload.ts",
+      "to": "src/client/snap-upload.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/snap-upload.test.ts",
+      "to": "src/client/snap-upload.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/app/components/witness-flow.ts",
+      "to": "src/client/witness-flow.ts",
+      "map": "client",
+      "renames": true,
+      "urls": true
+    },
+    {
+      "from": "src/app/components/witness-flow.test.ts",
+      "to": "src/client/witness-flow.test.ts",
+      "map": "client",
+      "renames": true
+    },
+    {
+      "from": "src/lib/us/exif-date.ts",
+      "to": "test/support/exif-date.ts",
+      "map": "support",
+      "only": [
+        "PHOTO_ZONE",
+        "pad",
+        "exifDateParts",
+        "segments",
+        "isExif",
+        "tiff",
+        "insertExifDate"
+      ]
+    }
+  ]
+}

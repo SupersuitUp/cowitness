@@ -193,3 +193,18 @@ if (typeof window !== 'undefined') {
     realReplace(null, '', window.location.href)
   })
 }
+
+// Cowitness is configured for every test as the app it came from configured it, so the tests moved
+// from there keep their exact addresses. These values live here and in fixtures only, never as
+// defaults in src/.
+import { createElement } from 'react'
+import { configure } from '../src/client/config.js'
+import { TestThread } from './support/test-thread.js'
+
+configure({
+  apiBase: '/api/us/snaps',
+  pageBase: '/cowitness',
+  uploadUrls: { photo: '/api/us/photos/upload-url', video: '/api/us/videos/upload-url' },
+  vaultName: 'test-recordings',
+  renderThread: (p) => createElement(TestThread, p),
+})
