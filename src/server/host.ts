@@ -22,8 +22,8 @@ export interface CowitnessHost<M extends string> {
   db(): Firestore
   /**
    * Whether an error is a refusal whose message goes back to a person (the transcriber's stored
-   * reason). Defaults to this package's own RuleError only; an app with refusals of its own passes
-   * its own check, so an error is never shown just because it carries a 4xx status.
+   * reason). This package's own RuleError is always a refusal; an app with refusals of its own
+   * passes a check that ADDS to that, so an error is never shown just because it carries a 4xx status.
    */
   isRefusal?(err: unknown): boolean
   /** The list snaps are kept in. */

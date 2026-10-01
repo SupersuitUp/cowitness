@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { RuleError } from '../errors.js'
 import { createCowitnessStore } from './store.js'
 import { fakeHost } from '../../test/support/fake-host.js'
 
@@ -133,6 +134,18 @@ describe('a spoken reaction', () => {
     expect(first.comments?.[0].recording).toMatchObject({ status: 'failed', reason: 'that recording is too long for the transcriber to take in one piece' })
     const second = await store.retranscribeReaction('ana', 'x1', 'r-abcdefgh')
     expect(second.comments?.[0].recording).toMatchObject({ status: 'failed', reason: 'the recording could not be made out' })
+    spy.mockRestore()
+  })
+
+  it("keeps the package's own refusal words when the host supplies its own hook", async () => {
+    class HostError extends Error { constructor(m: string, public status: number) { super(m) } }
+    const transcribe = vi.fn().mockRejectedValue(new RuleError('that recording is no longer in storage', 404))
+    const { b, store } = setup({ transcription: { languages: ['en'], transcribe }, isRefusal: (e) => e instanceof HostError })
+    b.put(AUDIO, Buffer.from('aa'))
+    await store.attachReaction('ana', 'x1', attach)
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const done = await store.transcribeReaction('x1', 'r-abcdefgh')
+    expect(done.comments?.[0].recording).toMatchObject({ status: 'failed', reason: 'that recording is no longer in storage' })
     spy.mockRestore()
   })
 

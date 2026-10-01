@@ -1,0 +1,17 @@
+{
+  "commit": "7e65c60a9cff94c5831978cdf36c73912de6ee7b",
+  "maps": {
+    "server": {
+      "@/lib/us/rules": "../shared-rules.js",
+      "@/lib/us/types": "../types.js",
+      "./_parse": "./parse.js"
+    }
+  },
+  "renames": {},
+  "urls": [],
+  "configImport": "",
+  "files": [
+    { "from": "src/app/api/us/snaps/_parse.ts", "to": "src/server/parse.ts", "map": "server" },
+    { "from": "src/app/api/us/snaps/_parse.test.ts", "to": "src/server/parse.test.ts", "map": "server" }
+  ]
+}

@@ -185,7 +185,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     } catch (err) {
       console.error(`transcribeReaction: ${rec.path}`, err)
       // A refusal written for a reader (ours or the transcriber's own) keeps its words.
-      const reason = (host.isRefusal ?? isRuleError)(err) ? (err as Error).message : 'the recording could not be made out'
+      const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
       return rewrite(snapId, (s) => failReactionTranscript(s, commentId, reason) as Snap<M>)
     }
     return rewrite(snapId, (s) => setReactionTranscript(s, commentId, words) as Snap<M>)
