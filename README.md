@@ -30,6 +30,14 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
 - `@supersuit/cowitness/client`: `CowitnessProvider`, `CowitnessHome`, `SnapDetail`, `SnapsArchive`,
   `StreakStrip`, `AddSnap`, `WitnessSession`, and the recording pieces other screens may share.
 
+  Also exported from `/client`, for an app that wires its own screens:
+  - `clientFeatures()`: the options the provider was configured with, every option off when none.
+  - `voiceSnapKey(snapId)`: the phone-vault key a held voice snap is kept under (`voice-snap:<id>`).
+  - `keepMeta(store, id, meta)`: keeps what was typed for a held recording (a caption, its switches) beside it, so a resend files it as meant.
+  - `keepNoteId(store, id, noteId)`: re-keys a held recording after a send under a fresh id, so a later resend files the snap the server may already have started.
+  - `sendHeld(store, send?)`: sends the held spoken reactions the server never confirmed, and returns how many it sent.
+  - `reactionKey(snapId)`: the phone-vault key a held spoken reaction is kept under (`snap:<id>`).
+
 ## The host (server)
 
 The `CowitnessHost<M>` type, exported from `@supersuit/cowitness/server`, documents every member in
@@ -100,6 +108,31 @@ The package hands these security decisions to the host, and cannot check them fo
   before an option was turned off. A snap filed "just us" stays "just us" after the option goes off,
   and with no circle it may be told to its author only. "Tell everyone but the actor" puts a private
   moment on the lock screen of a person every route refuses to show it to.
+- **Let the bucket's CORS accept the voice stamp header.** The phone PUTs a voice note straight to
+  the bucket with `x-goog-meta-cowitness-by`, and a browser preflights any header that is not
+  simple. The bucket answers the preflight only for request headers its CORS `responseHeader` names,
+  so a file that lists just `Content-Type` and the other `x-goog-*` headers makes every voice PUT
+  fail on every phone, while reactions keep working. Apply this (`gcloud storage buckets update
+  gs://<bucket> --cors-file=cors.json`), with your own origins:
+
+  ```json
+  [
+    {
+      "origin": ["https://your-app.example"],
+      "method": ["PUT"],
+      "responseHeader": [
+        "Content-Type",
+        "x-goog-content-length-range",
+        "x-goog-if-generation-match",
+        "x-goog-meta-cowitness-by"
+      ],
+      "maxAgeSeconds": 3600
+    }
+  ]
+  ```
+
+  Check it against the real bucket before relying on voice: record a note on a phone and confirm the
+  PUT succeeds.
 - **Apply a lifecycle rule to abandoned voice uploads.** A voice note goes straight to storage on a
   signed PUT, at `<prefix>snaps-voice/<snap>.<ext>`, before it is filed, so a phone that uploads
   and never files leaves bytes nobody will play. Filed notes live at the same paths, and a storage
@@ -111,7 +144,7 @@ The package hands these security decisions to the host, and cannot check them fo
 With no options the package is exactly what 0.1.3 was; every new field is optional and written
 only by an app that turned its option on. This holds for every request 0.1.3's own client sends.
 One request it did not send is now refused: with the options off, a filing body that carries
-`justUs: true` or any `tags` but `null` answers 400 rather than being filed with the field ignored, because an app
+a `justUs` other than `false` or `null`, or any `tags` but `null`, answers 400 rather than being filed with the field ignored, because an app
 that sends them believes the option is on, and ignoring the flag would show a private snap to
 everyone.
 
