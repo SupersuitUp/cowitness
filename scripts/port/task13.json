@@ -380,7 +380,7 @@
           "once the person has typed"
         ],
         [
-          " and never uploaded (2026-09-28: \"If I type\n// a comment on a snap the audio shouldn't send\"). Nothing typed",
+          "re: and never uploaded \\([^)]*\\)\\. Nothing typed",
           " and never uploaded, so a typed\n// comment and a recording never both go. Nothing typed"
         ]
       ]

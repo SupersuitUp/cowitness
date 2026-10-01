@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -186,5 +186,21 @@ describe('the task 13 port', () => {
       env: { ...process.env, PORT_ROOT: out }, stdio: 'pipe',
     })
     for (const f of manifest.files) expect(readFileSync(join(out, f.to), 'utf8'), f.to).toBe(readFileSync(join(ROOT, f.to), 'utf8'))
+  })
+})
+
+describe('the port manifests', () => {
+  it('carry no dated or quoted text in a literal replace rule, because a rule is committed as plainly as the file it fixes', () => {
+    const dir = join(ROOT, 'scripts/port')
+    for (const name of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      const m = JSON.parse(readFileSync(join(dir, name), 'utf8')) as { files: { from: string; replace?: [string, string][] }[] }
+      for (const f of m.files) {
+        for (const [from] of f.replace ?? []) {
+          if (from.startsWith('re:')) continue
+          expect(from, `${name} ${f.from}`).not.toMatch(/\d{4}-\d\d-\d\d/)
+          expect(from, `${name} ${f.from}`).not.toMatch(/"[^"]*\s[^"]*"/)
+        }
+      }
+    }
   })
 })
