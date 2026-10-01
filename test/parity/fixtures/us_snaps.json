@@ -1,0 +1,60 @@
+{
+  "s1": {
+    "by": "ana", "caption": "the view from work", "kind": "photo", "takenAt": "2026-09-27T14:03:00", "width": 3024, "height": 4032,
+    "paths": { "original": "us/original/s1.jpg", "display": "us/display/s1.jpg", "thumb": "us/thumb/s1.jpg" },
+    "witnessedAt": "2026-09-27T21:00:00.000Z", "hiddenAt": null, "createdAt": "2026-09-27T14:05:00.000Z",
+    "comments": [
+      { "id": "c-s1-1", "by": "ben", "text": "so good", "at": "2026-09-27T21:00:00.000Z", "hearts": { "ana": "2026-09-27T22:00:00.000Z" } },
+      { "id": "c-s1-2", "by": "ana", "text": "thank you", "at": "2026-09-27T22:01:00.000Z" }
+    ]
+  },
+  "s2": {
+    "by": "ben", "caption": "", "kind": "video", "takenAt": "2026-09-28T08:10:00", "width": 1080, "height": 1920,
+    "paths": { "original": "us/video/s2.mov", "display": "us/poster/s2.jpg", "thumb": "us/poster/s2.jpg" },
+    "video": { "path": "us/video/s2.mov", "posterPath": "us/poster/s2.jpg", "durationSec": 8.2, "contentType": "video/quicktime" },
+    "witnessedAt": null, "hiddenAt": null, "createdAt": "2026-09-28T08:12:00.000Z"
+  },
+  "s3": {
+    "by": "ben", "caption": "not this one", "kind": "photo", "takenAt": "2026-09-29T08:58:00", "width": 3024, "height": 4032,
+    "paths": { "original": "us/original/s3.jpg", "display": "us/display/s3.jpg", "thumb": "us/thumb/s3.jpg" },
+    "witnessedAt": null, "hiddenAt": "2026-09-29T10:00:00.000Z", "createdAt": "2026-09-29T09:00:00.000Z"
+  },
+  "s4": {
+    "by": "ana", "caption": "", "kind": "photo", "takenAt": "2026-09-29T11:58:00", "width": 4032, "height": 3024,
+    "paths": { "original": "us/original/s4.jpg", "display": "us/display/s4.jpg", "thumb": "us/thumb/s4.jpg" },
+    "witnessedAt": null, "hiddenAt": null, "createdAt": "2026-09-29T12:00:00.000Z",
+    "comments": [
+      { "id": "r-s4-voice01", "by": "ben", "text": "", "at": "2026-09-29T13:00:00.000Z",
+        "recording": { "path": "us/snaps-audio/s4/r-s4-voice01.m4a", "contentType": "audio/mp4", "durationSec": 6.5, "status": "transcribing", "startedAt": "2026-09-29T13:00:01.000Z" } }
+    ]
+  },
+  "s5": {
+    "by": "ben", "caption": "morning", "kind": "photo", "takenAt": "2026-09-30T06:58:00", "width": 3024, "height": 4032,
+    "paths": { "original": "us/original/s5.jpg", "display": "us/display/s5.jpg", "thumb": "us/thumb/s5.jpg" },
+    "witnessedAt": "2026-09-30T07:30:00.000Z", "hiddenAt": null, "createdAt": "2026-09-30T07:00:00.000Z",
+    "comments": [
+      { "id": "r-s5-voice01", "by": "ana", "text": "", "at": "2026-09-30T07:30:00.000Z",
+        "recording": { "path": "us/snaps-audio/s5/r-s5-voice01.webm", "contentType": "audio/webm", "durationSec": 3, "status": "failed", "reason": "nothing was heard in that recording" } },
+      { "id": "c-s5-2", "by": "ana", "text": "", "at": "2026-09-30T07:31:00.000Z", "images": [{ "id": "img01", "width": 1200, "height": 900 }] },
+      { "id": "r-s5-voice02", "by": "ana", "text": "bonjour", "at": "2026-09-30T07:32:00.000Z",
+        "recording": { "path": "us/snaps-audio/s5/r-s5-voice02.m4a", "contentType": "audio/mp4", "durationSec": 4, "language": "fr" } }
+    ]
+  },
+  "s6": {
+    "by": "ana", "caption": "", "kind": "video", "takenAt": "2026-09-30T09:00:00", "width": 720, "height": 1280,
+    "paths": { "original": "us/video/s6.mp4", "display": "", "thumb": "" },
+    "video": { "path": "us/video/s6.mp4", "posterPath": null, "durationSec": 12, "contentType": "video/mp4",
+      "stream": { "dir": "us/stream/s6", "master": "master.m3u8", "chapters": [{ "startSec": 0, "at": "2026-09-30T09:00:00", "thumbPath": null }] } },
+    "witnessedAt": null, "hiddenAt": null, "createdAt": "2026-09-30T09:05:00.000Z"
+  },
+  "s7": {
+    "by": "ben", "caption": "lunch", "kind": "photo", "takenAt": "2026-09-25T12:28:00", "width": 3024, "height": 4032,
+    "paths": { "original": "us/original/s7.jpg", "display": "us/display/s7.jpg", "thumb": "us/thumb/s7.jpg" },
+    "witnessedAt": null, "hiddenAt": null, "createdAt": "2026-09-25T12:30:00.000Z"
+  },
+  "s8": {
+    "by": "ana", "caption": "", "kind": "photo", "takenAt": "2026-09-26T18:58:00", "width": 3024, "height": 4032,
+    "paths": { "original": "us/original/s8.jpg", "display": "us/display/s8.jpg", "thumb": "us/thumb/s8.jpg" },
+    "witnessedAt": "2026-09-26T20:00:00.000Z", "hiddenAt": "2026-09-27T08:00:00.000Z", "createdAt": "2026-09-26T19:00:00.000Z"
+  }
+}

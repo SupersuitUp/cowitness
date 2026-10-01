@@ -173,7 +173,7 @@ describe('port-from-us replace', () => {
 // Needs the source checkout at the pinned commit, which CI does not have: it runs wherever the
 // source app is on disk (US_REPO overrides the default location) and is skipped elsewhere.
 const SOURCE = process.env.US_REPO ?? join(process.env.HOME ?? '', 'Documents/github-repos/us-app')
-const MANIFESTS = ['task13', 'task14']
+const MANIFESTS = ['task13', 'task14', 'task15']
 const pinOf = (name: string) => (JSON.parse(readFileSync(join(ROOT, `scripts/port/${name}.json`), 'utf8')) as { commit: string }).commit
 const haveSource = (name: string) => {
   try { execFileSync('git', ['-C', SOURCE, 'cat-file', '-e', `${pinOf(name)}^{commit}`], { stdio: 'ignore' }); return true } catch { return false }

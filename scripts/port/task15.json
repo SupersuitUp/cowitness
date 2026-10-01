@@ -1,0 +1,134 @@
+{
+  "commit": "7e65c60a9cff94c5831978cdf36c73912de6ee7b",
+  "maps": {
+    "oracle": {
+      "./pair": "./shim.js",
+      "./members": "./shim.js",
+      "./agenda": "./shim.js",
+      "@/lib/us/members": "./shim.js",
+      "@/lib/us/pair": "./shim.js",
+      "@/lib/us/types": "./types.js"
+    }
+  },
+  "renames": {},
+  "urls": [],
+  "configImport": "",
+  "files": [
+    {
+      "from": "src/lib/us/rules.ts",
+      "to": "test/parity/oracle/rules.ts",
+      "map": "oracle",
+      "only": [
+        "RuleError",
+        "NOTE_MAX",
+        "legacyId",
+        "legacyMessages",
+        "Threaded",
+        "threadOf",
+        "COMMENT_IMAGES_MAX",
+        "IMAGE_ID",
+        "validateCommentImages",
+        "messageSummary",
+        "QUOTE_MAX",
+        "normalizeQuote",
+        "addComment",
+        "heartComment",
+        "lastMessageFromOther",
+        "NOTHING_HEARD",
+        "CLIP_MAX_SEC",
+        "CLIP_MAX_BYTES",
+        "CLIP_CONTENT_TYPES",
+        "audioExtension",
+        "validateClip",
+        "VIDEO_MAX_BYTES",
+        "VIDEO_MAX_DURATION_SEC",
+        "isPositiveInt",
+        "validateVideoDims",
+        "LOCAL_TIME_RE",
+        "localTakenAt"
+      ],
+      "replace": [
+        [
+          "re:the autosaving field that existed until \\d{4}-\\d\\d-\\d\\d\\)",
+          "the earlier autosaving field)"
+        ]
+      ]
+    },
+    {
+      "from": "src/lib/us/snap-rules.ts",
+      "to": "test/parity/oracle/snap-rules.ts",
+      "map": "oracle",
+      "only": [
+        "SNAP_CAPTION_MAX",
+        "validateCaption",
+        "canSeeSnap",
+        "applySnapPatch",
+        "newestFirst",
+        "oldestFirst",
+        "archiveOf",
+        "openOf",
+        "witnessedOf",
+        "thumbPathOf",
+        "snapHasNew",
+        "coverOf",
+        "queueOf",
+        "cowitnessTile",
+        "REACTION_MAX_SEC",
+        "reactionAudioPath",
+        "COMMENT_ID_RE",
+        "validateCommentId",
+        "ReactionTicket",
+        "reactionTicket",
+        "validateReactionClip",
+        "addVoiceReaction",
+        "Spoken",
+        "onRecording",
+        "settled",
+        "markTranscribing",
+        "setReactionTranscript",
+        "failReactionTranscript",
+        "canAutoTranscribe",
+        "RETRANSCRIBE_STALE_MS",
+        "canRetranscribe"
+      ]
+    },
+    {
+      "from": "src/lib/us/types.ts",
+      "to": "test/parity/oracle/types.ts",
+      "map": "oracle",
+      "only": [
+        "Recording",
+        "CommentImage",
+        "Comment",
+        "MediaKind",
+        "VideoContentType",
+        "Chapter",
+        "VideoStream",
+        "VideoInfo",
+        "FiledMedia",
+        "Snap",
+        "SnapPatch",
+        "CowitnessSummary"
+      ]
+    },
+    {
+      "from": "src/app/components/cowitness-format.ts",
+      "to": "test/parity/oracle/cowitness-format.ts",
+      "map": "oracle"
+    },
+    {
+      "from": "src/app/components/streak.ts",
+      "to": "test/parity/oracle/streak.ts",
+      "map": "oracle",
+      "only": [
+        "Streak",
+        "Streaks",
+        "dayKey",
+        "previousDay",
+        "countFrom",
+        "daysOf",
+        "streaksOf"
+      ]
+    }
+  ]
+}
