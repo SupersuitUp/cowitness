@@ -58,20 +58,42 @@
       "to": "src/client/recorder.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "out of her voice",
+          "out of the voice"
+        ],
+        [
+          "reach her as a status code",
+          "reach the person as a status code"
+        ]
+      ]
     },
     {
       "from": "src/app/components/recorder.test.ts",
       "to": "src/client/recorder.test.ts",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "that she is signed out",
+          "that the person is signed out"
+        ]
+      ]
     },
     {
       "from": "src/app/components/speech.ts",
       "to": "src/client/speech.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "snap she moved past",
+          "snap the reader moved past"
+        ]
+      ]
     },
     {
       "from": "src/app/components/speech.test.ts",
@@ -91,26 +113,98 @@
       "to": "src/client/hearing.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "Is it hearing her?",
+          "Is it hearing the speaker?"
+        ],
+        [
+          "to grade how loud she is",
+          "to grade how loud they are"
+        ],
+        [
+          "would be lying in the one language this app exists for",
+          "would be lying in whatever language is spoken"
+        ]
+      ]
     },
     {
       "from": "src/app/components/hearing.test.ts",
       "to": "src/client/hearing.test.ts",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "is it hearing her",
+          "is it hearing the speaker"
+        ],
+        [
+          "she is being heard, just pausing",
+          "they are being heard, just pausing"
+        ]
+      ]
     },
     {
       "from": "src/app/components/recording-vault.ts",
       "to": "src/client/recording-vault.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "re:thinking out loud in [A-Z][a-z]+ cannot",
+          "thinking out loud cannot"
+        ],
+        [
+          "still hers.",
+          "still theirs."
+        ],
+        [
+          "teaches her to ignore",
+          "teaches the person to ignore"
+        ],
+        [
+          "are different things to her.",
+          "are different things to the person."
+        ],
+        [
+          "recognisable on her desktop",
+          "recognisable on their desktop"
+        ],
+        [
+          "// deliberately four small methods with no logic in them.\n\n",
+          "// deliberately four small methods with no logic in them.\nimport { clientConfig } from './config.js'\n\n"
+        ],
+        [
+          "const DB = 'us-recordings'\nconst SHELF = 'pending'\n\nfunction open(): Promise<IDBDatabase> {\n  return new Promise((resolve, reject) => {\n    const req = indexedDB.open(DB, 1)",
+          "const SHELF = 'pending'\n\n// The database is named by the app (CowitnessClientConfig.vaultName), so an app that held\n// recordings before it used this package keeps finding them: it passes the name it always used.\nfunction open(db: string): Promise<IDBDatabase> {\n  return new Promise((resolve, reject) => {\n    const req = indexedDB.open(db, 1)"
+        ],
+        [
+          "async function shelf(mode: IDBTransactionMode): Promise<IDBObjectStore> {\n  return (await open()).transaction(SHELF, mode).objectStore(SHELF)\n}\n\nexport function indexedDbVault(): VaultStore | null {\n  if (typeof indexedDB === 'undefined') return null\n  return {\n    async get(id) { return done(await shelf('readonly').then((s) => s.get(id))) },\n    async put(rec) { await done(await shelf('readwrite').then((s) => s.put(rec))) },\n    async delete(id) { await done(await shelf('readwrite').then((s) => s.delete(id))) },\n    async all() { return done(await shelf('readonly').then((s) => s.getAll())) },\n  }\n}",
+          "async function shelf(db: string, mode: IDBTransactionMode): Promise<IDBObjectStore> {\n  return (await open(db)).transaction(SHELF, mode).objectStore(SHELF)\n}\n\nexport function indexedDbVault(db: string = clientConfig().vaultName): VaultStore | null {\n  if (typeof indexedDB === 'undefined') return null\n  return {\n    async get(id) { return done(await shelf(db, 'readonly').then((s) => s.get(id))) },\n    async put(rec) { await done(await shelf(db, 'readwrite').then((s) => s.put(rec))) },\n    async delete(id) { await done(await shelf(db, 'readwrite').then((s) => s.delete(id))) },\n    async all() { return done(await shelf(db, 'readonly').then((s) => s.getAll())) },\n  }\n}"
+        ]
+      ]
     },
     {
       "from": "src/app/components/recording-vault.test.ts",
       "to": "src/client/recording-vault.test.ts",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "teaches her to ignore",
+          "teaches the person to ignore"
+        ],
+        [
+          "holding her audio",
+          "holding their audio"
+        ],
+        [
+          "recognisable on her desktop",
+          "recognisable on their desktop"
+        ]
+      ]
     },
     {
       "from": "src/app/components/reaction-send.ts",
@@ -195,20 +289,46 @@
       "to": "src/client/history-layer.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "(‹ Us, ‹ Photos, ‹ Poems)",
+          "(‹ Home, ‹ Photos, ‹ Poems)"
+        ],
+        [
+          "Us is installed to\n// the Home Screen",
+          "The app is installed to\n// the Home Screen"
+        ],
+        [
+          "which is where Us actually runs)",
+          "which is where the app actually runs)"
+        ]
+      ]
     },
     {
       "from": "src/app/components/history-layer.test.tsx",
       "to": "src/client/history-layer.test.tsx",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "which is where Us actually runs and",
+          "which is where the app actually runs and"
+        ]
+      ]
     },
     {
       "from": "src/app/components/video-meta.ts",
       "to": "src/client/video-meta.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "on HER phone",
+          "on THE PERSON'S phone"
+        ]
+      ]
     },
     {
       "from": "src/app/components/video-meta.test.ts",
@@ -221,7 +341,13 @@
       "to": "src/client/photo-date.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "saved\n// back out of Us could",
+          "saved\n// back out of the app could"
+        ]
+      ]
     },
     {
       "from": "src/app/components/photo-date.test.ts",
@@ -247,7 +373,17 @@
       "to": "src/client/witness-flow.ts",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "once she has typed",
+          "once the person has typed"
+        ],
+        [
+          " and never uploaded (2026-09-28: \"If I type\n// a comment on a snap the audio shouldn't send\"). Nothing typed",
+          " and never uploaded, so a typed\n// comment and a recording never both go. Nothing typed"
+        ]
+      ]
     },
     {
       "from": "src/app/components/witness-flow.test.ts",

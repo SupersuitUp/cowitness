@@ -6,6 +6,9 @@
 //
 //   node scripts/port-from-us.mjs <manifest.json>      (US_REPO overrides the source checkout)
 //
+// A file entry may carry "replace": [[from, to], ...], literal edits applied after the imports are
+// rewritten (a "re:" prefix on the first item makes it a regular expression).
+//
 // A file entry may carry "only": [names]. The output is then just those top-level declarations,
 // verbatim, plus the import lines filtered to the names they use, so a reference copy is produced
 // from the pinned source and never trimmed by hand.
@@ -111,6 +114,16 @@ for (const f of manifest.files) {
   let text = execFileSync('git', ['-C', US, 'show', `${manifest.commit}:${f.from}`], { encoding: 'utf8', maxBuffer: 1 << 26 })
   if (f.only) text = only(text, f.only, f.from)
   text = text.replace(/(from\s+|import\(\s*|vi\.mock\(\s*)(['"])([^'"]+)\2/g, (_all, lead, q, spec) => `${lead}${q}${rewrite(spec, map)}${q}`)
+  // Literal, per-file edits the pinned source needs (a scrub of wording that must not ship, or a
+  // line the package changes on purpose). A rule that matches nothing is an error, so a rule that
+  // has gone stale cannot hide.
+  for (const [from, to] of f.replace ?? []) {
+    // A "re:" prefix makes the rule a regular expression, for a word that must not be written
+    // into this manifest at all (the private-words check reads it too).
+    const re = from.startsWith('re:') ? new RegExp(from.slice(3), 'g') : null
+    if (!(re ? re.test(text) : text.includes(from))) throw new Error(`${f.from}: replace rule matches nothing: ${JSON.stringify(from.slice(0, 80))}`)
+    text = re ? text.replace(new RegExp(from.slice(3), 'g'), to) : text.split(from).join(to)
+  }
   if (f.renames) {
     for (const [a, b] of Object.entries(manifest.renames ?? {})) text = text.replace(new RegExp(`\\b${a}\\b`, 'g'), b)
   }

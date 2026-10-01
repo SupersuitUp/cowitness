@@ -152,3 +152,31 @@ describe('port-from-us', () => {
     expect(() => port('const a = 1', {}, { commit: '--upload-pack=x' })).toThrow(/hex/)
   })
 })
+
+describe('port-from-us replace', () => {
+  it('applies literal per-file edits after the imports are rewritten', () => {
+    const out = port("import { INK } from '../theme'\n// she said hi\n", { replace: [['she said hi', 'they said hi']] })
+    expect(out).toContain('// they said hi')
+    expect(out).toContain("from './theme.js'")
+  })
+
+  it('takes a re: rule as a regular expression', () => {
+    expect(port('// in Xyz cannot\n', { replace: [['re:in [A-Z][a-z]+ cannot', 'cannot']] })).toContain('// cannot')
+    expect(() => port('a\n', { replace: [['re:z+', 'x']] })).toThrow(/matches nothing/)
+  })
+
+  it('refuses a rule that matches nothing, naming the file', () => {
+    expect(() => port('const a = 1\n', { replace: [['not there', 'x']] })).toThrow(/src\/a\.tsx: replace rule matches nothing/)
+  })
+})
+
+describe('the task 13 port', () => {
+  it('reproduces the committed files byte for byte, so the scrub survives a re-port', () => {
+    const out = mkdtempSync(join(tmpdir(), 'rp-'))
+    const manifest = JSON.parse(readFileSync(join(ROOT, 'scripts/port/task13.json'), 'utf8')) as { files: { to: string }[] }
+    execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), join(ROOT, 'scripts/port/task13.json')], {
+      env: { ...process.env, PORT_ROOT: out }, stdio: 'pipe',
+    })
+    for (const f of manifest.files) expect(readFileSync(join(out, f.to), 'utf8'), f.to).toBe(readFileSync(join(ROOT, f.to), 'utf8'))
+  })
+})

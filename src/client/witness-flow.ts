@@ -16,6 +16,6 @@ export const SWIPE_UP_PX = 60
 export const isSwipeUp = (startY: number, endY: number) => startY - endY >= SWIPE_UP_PX
 
 // Whether a snap's recording is sent. Typed words are the reaction: once the person has typed something,
-// what was said before is let go of on the phone and never uploaded (2026-09-28: "If I type
-// a comment on a snap the audio shouldn't send"). Nothing typed: it goes if it held speech.
+// what was said before is let go of on the phone and never uploaded, so a typed
+// comment and a recording never both go. Nothing typed: it goes if it held speech.
 export const sendsRecording = (worthKeeping: boolean, typed: string) => worthKeeping && typed.trim() === ''
