@@ -3,6 +3,8 @@
 // zone. The member keys are passed in rather
 // than read from the app's own list of people, and "together" is the days every one shared.
 import type { SnapRow } from './format.js'
+import type { HouseholdStreakRule } from './features.js'
+import { addDays, weekStart, zoned } from './zoned.js'
 
 export interface Streak { count: number; postedToday: boolean }
 export type Streaks = Record<string, Streak> & { together: Streak }
@@ -38,4 +40,37 @@ export function streaksOf(rows: SnapRow[], now: Date, keys: readonly string[]): 
   const out = { together: countFrom(together, now) } as Streaks
   keys.forEach((m, i) => { out[m] = countFrom(sets[i], now) })
   return out
+}
+
+// One count for everyone who shares. A day counts when anything was shared that day, in the rule's
+// time zone. A missed day breaks it, except one free skip per Monday-to-Sunday week when the rule
+// allows it. Today is owed, not missed, until it is over, and nothing before `since` counts.
+export interface HouseholdStreak { count: number; capturedToday: boolean; skipUsedThisWeek: boolean }
+
+export function captureStreak(days: Set<string>, today: string, since: string, freeSkipsPerWeek: 0 | 1): HouseholdStreak {
+  const capturedToday = days.has(today)
+  // A missed day spends its week's skip only once a shared day lies beyond it; misses before the
+  // streak began are where it began, not skips.
+  const used = new Set<string>()
+  let pending: string[] = []
+  let d = capturedToday ? today : addDays(today, -1)
+  let count = 0
+  while (d >= since) {
+    if (days.has(d)) {
+      count++
+      pending.forEach((w) => used.add(w))
+      pending = []
+    } else {
+      const w = weekStart(d)
+      if (freeSkipsPerWeek === 0 || used.has(w) || pending.includes(w)) break
+      pending.push(w)
+    }
+    d = addDays(d, -1)
+  }
+  return { count, capturedToday, skipUsedThisWeek: used.has(weekStart(today)) }
+}
+
+export function householdStreakOf(rows: SnapRow[], now: Date, rule: HouseholdStreakRule): HouseholdStreak {
+  const days = new Set(rows.filter((r) => !r.hidden).map((r) => zoned(new Date(r.createdAt), rule.timeZone).dayKey))
+  return captureStreak(days, zoned(now, rule.timeZone).dayKey, rule.since, rule.freeSkipsPerWeek)
 }
