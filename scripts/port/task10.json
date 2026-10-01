@@ -1,0 +1,28 @@
+{
+  "commit": "7e65c60a9cff94c5831978cdf36c73912de6ee7b",
+  "maps": {
+    "lib": {
+      "./members": "./types.js",
+      "./types": "./types.js",
+      "./rules": "./shared-rules.js",
+      "./snap-rules": "./snap-rules.js",
+      "@/lib/us/members": "./types.js",
+      "@/lib/us/types": "./types.js",
+      "./cowitness-format": "./format.js",
+      "./streak": "./streak.js",
+      "./notes-format": "./client/group-by-day.js"
+    },
+    "group": {}
+  },
+  "renames": { "NOTE_MAX": "MESSAGE_MAX" },
+  "urls": [],
+  "configImport": "",
+  "files": [
+    { "from": "src/lib/us/snap-rules.ts", "to": "src/snap-rules.ts", "map": "lib", "renames": true },
+    { "from": "src/lib/us/snap-rules.test.ts", "to": "src/snap-rules.test.ts", "map": "lib", "renames": true },
+    { "from": "src/app/components/cowitness-format.ts", "to": "src/format.ts", "map": "lib" },
+    { "from": "src/app/components/cowitness-format.test.ts", "to": "src/format.test.ts", "map": "lib" },
+    { "from": "src/app/components/streak.test.ts", "to": "src/streak.test.ts", "map": "lib" },
+    { "from": "src/app/components/notes-format.ts", "to": "src/client/group-by-day.ts", "map": "group", "only": ["dayOf", "groupByDayOf"] }
+  ]
+}
