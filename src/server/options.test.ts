@@ -454,3 +454,13 @@ describe('one request asks who the people are once', () => {
     expect(askPeopleOnce(host)).toBe(host)
   })
 })
+
+describe('the streak in the audience kind', () => {
+  it('sends a person who only witnesses no streak rows, and a person who shares their rows as before', async () => {
+    const { routes, host, store } = setup({ witnessing: 'audience' })
+    as(host, 'ana')
+    await routes.photo.POST(post({ photoId: 'p1' }))
+    expect((await store.listCowitness('cy')).streak).toEqual([])
+    expect((await store.listCowitness('ben')).streak.map((r) => r.id)).toEqual(['p1'])
+  })
+})

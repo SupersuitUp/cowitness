@@ -24,24 +24,23 @@ function Pill({ label, s }: { label: string; s: Streak }) {
 // Days in a row each of you shared a snap, and days in a row you both did. A streak whose owner
 // has not shared yet today is faded: still alive, ends at midnight. Rendered only after mount,
 // because a day is the phone's local day and the server render would count in its own zone.
-// The household streak is one count for everyone who shares, in the app's own time zone; a person
-// who does not share (`shares` false) sees the count and is never asked to share.
+// The household streak is one count for everyone who shares, in the app's own time zone. A person
+// who does not share (`shares` false) is shown no streak at all: a count over what they can see would
+// be wrong, and one over everything would tell them private days exist.
 export function StreakStrip({ rows, me, names, shares = true }: { rows: SnapRow[]; me: Member; names: MemberNames; shares?: boolean }) {
   const rule = clientFeatures().streak
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => setNow(new Date()), [])
-  if (!now) return null
+  if (!now || !shares) return null
   if (rule.kind === 'household') {
     const h = householdStreakOf(rows, now, rule)
     return (
       <section aria-label="Streak" className="px-4">
         <ul className="flex gap-2"><Pill label="Days in a row" s={{ count: h.count, postedToday: h.capturedToday }} /></ul>
-        {shares && (
-          <p className="mt-2 text-center text-[14px]" style={{ color: MUTED, fontFamily: SERIF }}>
-            {h.capturedToday ? 'Something was shared today.' : h.count > 0 ? `Share something today to keep the ${h.count}-day streak.` : 'Share something today to start a streak.'}
-            {h.skipUsedThisWeek ? ' One free skip used this week.' : ''}
-          </p>
-        )}
+        <p className="mt-2 text-center text-[14px]" style={{ color: MUTED, fontFamily: SERIF }}>
+          {h.capturedToday ? 'Something was shared today.' : h.count > 0 ? `Share something today to keep the ${h.count}-day streak.` : 'Share something today to start a streak.'}
+          {h.skipUsedThisWeek ? ' One free skip used this week.' : ''}
+        </p>
       </section>
     )
   }

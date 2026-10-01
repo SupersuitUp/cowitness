@@ -50,7 +50,9 @@ describe('"just us" is never drawn for a person who only witnesses', () => {
     expect(html).not.toContain('/cowitness/kept')
     expect(html).not.toContain('kept.jpg')
     expect(screen.getByRole('button', { name: 'Witness (1)' })).toBeInTheDocument()
-    expect(home.streak.map((r) => r.id)).toEqual(['open'])
+    // A person who only witnesses is sent no streak rows at all, so no count can be drawn from them.
+    expect(home.streak).toEqual([])
+    expect((await store.listCowitness('ben')).streak.map((r) => r.id).sort()).toEqual(['kept', 'open'])
     expect(await store.getSnapView('cy', 'kept')).toBeNull()
     // The private one is the newest, and still it is neither the cover, nor counted, nor new.
     expect(await store.cowitnessSummary('cy', '2026-09-30T10:00:00.000Z')).toEqual({ count: 1, coverUrl: 'signed:p/thumb/x.jpg', hasNew: false, waiting: 1 })

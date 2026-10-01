@@ -120,15 +120,16 @@ describe('CowitnessHome with options', () => {
     render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
     expect(screen.getByRole('button', { name: 'Add a snap' })).toHaveAttribute('data-shares', 'true')
   })
-  it('the household streak asks only a person who shares to share', () => withFeatures(
+  it('the household streak is drawn only for a person who shares', () => withFeatures(
     { streak: { kind: 'household', timeZone: 'America/Los_Angeles', since: '2026-09-01', freeSkipsPerWeek: 1 } },
     async () => {
       const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} />)
       expect(await screen.findByText(/Share something today/)).toBeInTheDocument()
       unmount()
       render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a')]} me="cy" names={{ ...NAMES, cy: 'Cy' }} can={{ share: false, witness: true }} />)
-      expect(await screen.findByRole('region', { name: 'Streak' })).toBeInTheDocument()
-      expect(screen.queryByText(/Share something today/)).toBeNull()
+      expect(await screen.findByRole('button', { name: 'Witness (1)' })).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Streak' })).toBeNull()
+      expect(screen.queryByText('Days in a row')).toBeNull()
     },
   ))
   it('sends held voice notes only when voice snaps are on, and says in one line when one was let go', async () => {

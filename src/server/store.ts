@@ -55,6 +55,9 @@ export function assertHostFits<M extends string>(host: CowitnessHost<M>, f: Cowi
 // app who its people are once per call. Make the request's store from this host instead and it asks
 // once for the whole request; make a new one for the next request, so a change in who is who shows.
 // A host with no people() is handed back as it is.
+// Call it per request, NEVER at module scope: a store made from it once per process keeps the people
+// it first read until a redeploy, so a person moved from sharing to only witnessing would go on seeing
+// "just us" snaps, and a failed first read would fail every request after it.
 export function askPeopleOnce<M extends string>(host: CowitnessHost<M>): CowitnessHost<M> {
   if (typeof host.people !== 'function') return host
   const ask = host.people.bind(host)
@@ -136,7 +139,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     const ctx = await circle()
     const all = await readSnaps()
     const [rows, queue] = await Promise.all([Promise.all(openOf(all, m, ctx).map(tileRow)), Promise.all(queueOf(all, m, ctx).map(withUrls))])
-    return { rows, queue, streak: archiveOf(all, m, ctx).map((s) => snapRow(s)), witnessed: witnessedOf(all, m, ctx).length }
+    // A person who only witnesses has no streak, so no rows for one are sent at all.
+    const streak = ctx?.witnessing === 'audience' && !ctx.sharers.has(m) ? [] : archiveOf(all, m, ctx).map((s) => snapRow(s))
+    return { rows, queue, streak, witnessed: witnessedOf(all, m, ctx).length }
   }
 
   async function listWitnessed(m: M): Promise<SnapRow[]> {

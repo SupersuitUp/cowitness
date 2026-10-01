@@ -47,9 +47,8 @@ describe('StreakStrip, household', () => {
     expect(screen.getByText(/One free skip used this week/)).toBeInTheDocument()
     expect(screen.queryByText('Together')).toBeNull()
   }))
-  it('a person who only witnesses sees the count without being asked to share', () => household(() => {
-    render(<StreakStrip me="cy" names={{ ana: 'Ana', cy: 'Cy' }} shares={false} rows={[hrow('2026-10-01T18:00:00Z')]} />)
-    expect(screen.getByText('1')).toBeInTheDocument()
-    expect(screen.queryByText(/Share something|was shared today|free skip/)).toBeNull()
+  it('a person who only witnesses is shown no streak at all, not even the count', () => household(() => {
+    const { container } = render(<StreakStrip me="cy" names={{ ana: 'Ana', cy: 'Cy' }} shares={false} rows={[hrow('2026-10-01T18:00:00Z')]} />)
+    expect(container).toBeEmptyDOMElement()
   }))
 })

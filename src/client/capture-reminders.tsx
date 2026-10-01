@@ -13,11 +13,13 @@ export function CaptureReminders({ initial, children }: { initial: PromptSetting
   const [draft, setDraft] = useState(initial.times.join(', '))
   const [failed, setFailed] = useState(false)
   const snoozed = s.snoozedUntil !== null && s.snoozedUntil >= initial.today
-  const save = async (body: unknown) => {
+  // Whether the save landed, so a refused edit keeps what was typed rather than throwing it away.
+  const save = async (body: unknown): Promise<boolean> => {
     setFailed(false)
     const res = await fetch(`${clientConfig().apiBase}/prompts`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null)
-    if (res?.ok) setS((await res.json()) as PromptSettings)
-    else setFailed(true)
+    if (res?.ok) { setS((await res.json()) as PromptSettings); return true }
+    setFailed(true)
+    return false
   }
   return (
     <section aria-label="Reminders" className="mx-4 rounded-2xl p-4" style={{ border: `1px solid ${HAIRLINE}` }}>
@@ -29,7 +31,7 @@ export function CaptureReminders({ initial, children }: { initial: PromptSetting
         <div className="mt-3 flex gap-2">
           <label className="sr-only" htmlFor="reminder-times">Times</label>
           <input id="reminder-times" value={draft} onChange={(e) => setDraft(e.target.value)} className="h-11 flex-1 rounded-2xl px-3 text-sm" style={{ border: `1px solid ${HAIRLINE}` }} />
-          <button type="button" className="h-11 px-3 text-sm" style={{ color: INK }} onClick={async () => { await save({ times: draft.split(',').map((x) => x.trim()).filter(Boolean) }); setEditing(false) }}>Save</button>
+          <button type="button" className="h-11 px-3 text-sm" style={{ color: INK }} onClick={async () => { if (await save({ times: draft.split(',').map((x) => x.trim()).filter(Boolean) })) setEditing(false) }}>Save</button>
         </div>
       ) : (
         <div className="mt-3 flex gap-2">
