@@ -183,4 +183,46 @@ describe('sendHeldVoiceSnaps', () => {
     expect(await sendHeldVoiceSnaps(store, send as never)).toBe(0)
     expect((await store.all())[0].noteId).toBe(voiceSnapKey('r-freshfresh'))
   })
+
+  describe('a refusal that will never change', () => {
+    const held = async () => {
+      const store = memoryVault()
+      await beginRecording(store, { id: 'v-abcdefgh', noteId: voiceSnapKey('v-abcdefgh'), mimeType: 'audio/mp4' })
+      await keepChunk(store, 'v-abcdefgh', new Blob(['ab']), 2)
+      await endRecording(store, 'v-abcdefgh', 2)
+      await keepMeta(store, 'v-abcdefgh', { caption: 'evening', justUs: true })
+      return store
+    }
+    const failing = (err: unknown) => vi.fn(async () => { throw err })
+
+    it.each([400, 403, 404])('lets a held note go after a %i, and says so once', async (status) => {
+      const store = await held()
+      const onDropped = vi.fn()
+      expect(await sendHeldVoiceSnaps(store, failing(Object.assign(new Error('no'), { status })), onDropped)).toBe(0)
+      expect(await store.all()).toEqual([])
+      expect(onDropped).toHaveBeenCalledTimes(1)
+      expect(onDropped).toHaveBeenCalledWith({ id: 'v-abcdefgh', caption: 'evening', status })
+      expect(await sendHeldVoiceSnaps(store, failing(Object.assign(new Error('no'), { status })), onDropped)).toBe(0)
+      expect(onDropped).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      ['the network', new Error('upload failed')],
+      ['a server error', Object.assign(new Error('no'), { status: 503 })],
+      ['a rate limit', Object.assign(new Error('no'), { status: 429 })],
+    ])('keeps a held note after %s, to try again next visit', async (_what, err) => {
+      const store = await held()
+      const onDropped = vi.fn()
+      expect(await sendHeldVoiceSnaps(store, failing(err), onDropped)).toBe(0)
+      expect(await store.all()).toHaveLength(1)
+      expect(onDropped).not.toHaveBeenCalled()
+    })
+  })
+
+  it('reports the status of a refusal, so a held send can tell final from passing', async () => {
+    fetchMock.mockResolvedValueOnce(ok({ snapId: 'v-abcdefgh', uploaded: true })).mockResolvedValueOnce(refused(400))
+    await expect(sendVoiceSnap(new Blob(['ab'], { type: 'audio/mp4' }), 4, 'v-abcdefgh', { caption: '' })).rejects.toMatchObject({ status: 400 })
+    fetchMock.mockResolvedValueOnce(refused(503))
+    await expect(sendVoiceSnap(new Blob(['ab'], { type: 'audio/mp4' }), 4, 'v-abcdefgh', { caption: '' })).rejects.toMatchObject({ status: 503 })
+  })
 })

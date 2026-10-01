@@ -10,6 +10,10 @@ vi.mock('./voice-note.js', () => ({
     <button type="button" onClick={() => onRecorded({ blob: new Blob(['ab'], { type: 'audio/mp4' }), durationSec: 7, id: 'r-heldheld' })}>Done recording</button>
   ),
 }))
+vi.mock('./recording-vault.js', async (orig) => ({
+  ...(await orig<typeof import('./recording-vault.js')>()),
+  indexedDbVault: () => null, forget: vi.fn(async () => {}), keepMeta: vi.fn(async () => {}),
+}))
 vi.mock('./dual-camera.js', () => ({ openStream: vi.fn(async () => ({}) as MediaStream) }))
 vi.mock('./snap-camera.js', () => ({
   SnapCamera: ({ onCapture, onPickInstead }: { onCapture(f: File): void; onPickInstead(): void }) => (
@@ -25,6 +29,7 @@ import { postSnap } from './snap-upload.js'
 import { openStream } from './dual-camera.js'
 import { clientConfig, configure } from './config.js'
 import { sendVoiceSnap } from './voice-snap.js'
+import { forget } from './recording-vault.js'
 
 const pick = (file: File) => fireEvent.change(screen.getByLabelText('Choose a photo'), { target: { files: [file] } })
 
@@ -123,7 +128,7 @@ describe('AddSnap with options', () => {
   })
   it('drops the double camera, offers a voice note, and shows "just us" and the tag picker on the sheet', () => {
     withOptions({ doubleCamera: false, voiceSnaps: true, justUs: true, tags: true })
-    render(<AddSnap tagChoices={[{ id: 't-first', label: 'First' }]} />)
+    render(<AddSnap shares tagChoices={[{ id: 't-first', label: 'First' }]} />)
     expect(screen.queryByRole('button', { name: 'Double camera photo' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Voice note' })).toBeInTheDocument()
     pick(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))
@@ -132,7 +137,7 @@ describe('AddSnap with options', () => {
   })
   it('shows each switch only when its own option is on', () => {
     withOptions({ justUs: true })
-    const { unmount } = render(<AddSnap tagChoices={[{ id: 't-first', label: 'First' }]} />)
+    const { unmount } = render(<AddSnap shares tagChoices={[{ id: 't-first', label: 'First' }]} />)
     pick(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))
     expect(screen.getByRole('switch', { name: 'Just us' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Tag')).toBeNull()
@@ -145,7 +150,7 @@ describe('AddSnap with options', () => {
   })
   it('files a photo with "just us" and its tag when they are chosen', async () => {
     withOptions({ justUs: true, tags: true })
-    render(<AddSnap tagChoices={[{ id: 't-first', label: 'First' }]} />)
+    render(<AddSnap shares tagChoices={[{ id: 't-first', label: 'First' }]} />)
     pick(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))
     fireEvent.click(screen.getByRole('switch', { name: 'Just us' }))
     fireEvent.change(screen.getByLabelText('Tag'), { target: { value: 't-first' } })
@@ -155,7 +160,7 @@ describe('AddSnap with options', () => {
   })
   it('records a voice note, shows its length, and sends it as a snap with what was chosen', async () => {
     withOptions({ voiceSnaps: true, justUs: true })
-    render(<AddSnap languages={['en', 'fr']} />)
+    render(<AddSnap shares languages={['en', 'fr']} />)
     fireEvent.click(screen.getByRole('button', { name: 'Voice note' }))
     fireEvent.click(screen.getByRole('button', { name: 'Done recording' }))
     expect(screen.getByRole('dialog', { name: 'New snap' })).toBeInTheDocument()
@@ -175,5 +180,31 @@ describe('AddSnap with options', () => {
     vi.mocked(sendVoiceSnap).mockRejectedValue(new Error('offline'))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
     expect(screen.getByText('Not sent. Try again.')).toBeInTheDocument()
+  })
+  it('offers "just us" only to a person who shares, since anyone else would be refused it', () => {
+    withOptions({ justUs: true })
+    render(<AddSnap />)
+    pick(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))
+    expect(screen.queryByRole('switch', { name: 'Just us' })).toBeNull()
+  })
+  it('forgets a recorded voice note the person closes without sending, so nothing publishes it later', async () => {
+    withOptions({ voiceSnaps: true })
+    render(<AddSnap />)
+    fireEvent.click(screen.getByRole('button', { name: 'Voice note' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done recording' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close' })) })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New snap' })).toBeNull())
+    expect(forget).toHaveBeenCalledWith(expect.anything(), 'r-heldheld')
+  })
+  it('keeps a voice note whose send failed when the sheet is closed, so it is sent on the next visit', async () => {
+    withOptions({ voiceSnaps: true })
+    render(<AddSnap />)
+    fireEvent.click(screen.getByRole('button', { name: 'Voice note' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done recording' }))
+    vi.mocked(sendVoiceSnap).mockRejectedValue(new Error('offline'))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close' })) })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New snap' })).toBeNull())
+    expect(forget).not.toHaveBeenCalled()
   })
 })

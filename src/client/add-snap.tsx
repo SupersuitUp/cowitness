@@ -22,7 +22,9 @@ import { DANGER, HAIRLINE, INK, MUTED, ON_INK, PLACEHOLDER, SERIF } from './them
 // opens the library; both happen inside the tap, or iOS refuses them. Either one ends as a file,
 // and the sheet rises on the file, for an optional caption and Send. Each option the app turned on
 // adds its own piece (a voice note, "just us", a tag) and with every option off nothing is added.
-export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice[]; languages?: readonly string[] } = {}) {
+// "Just us" is offered only to a person the app says shares (`shares`), because the server refuses it
+// from anyone else.
+export function AddSnap({ tagChoices = [], languages, shares = false }: { tagChoices?: TagChoice[]; languages?: readonly string[]; shares?: boolean } = {}) {
   const router = useRouter()
   const f = clientFeatures()
   const [justUs, setJustUs] = useState(false)
@@ -30,6 +32,9 @@ export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice
   const [voice, setVoice] = useState<{ blob: Blob; durationSec: number; id: string } | null>(null)
   const [recording, setRecording] = useState(false)
   const [language, setLanguage] = useState('auto')
+  // A voice note whose send failed is held for the next visit, with what was typed for it. One that
+  // was never sent is not: closing the sheet throws it away.
+  const heldForResend = useRef(false)
   const photos = useRef<HTMLInputElement>(null)
   const videos = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -66,6 +71,8 @@ export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice
 
   const close = () => {
     setFile(null); setCaption(''); setState('idle'); setProgress(0); sent.current = null; drawn.current = false
+    if (voice && !heldForResend.current) void forget(indexedDbVault() ?? memoryVault(), voice.id).catch(() => {})
+    heldForResend.current = false
     setVoice(null); setJustUs(false); setTag('')
   }
 
@@ -94,6 +101,7 @@ export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice
       close()
       router.refresh()
     } catch {
+      if (voice) heldForResend.current = true
       setState('failed')
     }
   }
@@ -145,7 +153,7 @@ export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice
       <PhotoInput ref={videos} label="Choose a video" accept="video/*" multiple={false} onFiles={picked} />
       {recording && (
         <BottomSheet title="Voice note" onClose={() => setRecording(false)}>
-          <VoiceNote onCancel={() => setRecording(false)} onRecorded={(r) => { setRecording(false); sent.current = null; setVoice(r) }} />
+          <VoiceNote onCancel={() => setRecording(false)} onRecorded={(r) => { setRecording(false); sent.current = null; heldForResend.current = false; setVoice(r) }} />
         </BottomSheet>
       )}
       {(file || voice) && (
@@ -175,7 +183,7 @@ export function AddSnap({ tagChoices = [], languages }: { tagChoices?: TagChoice
             className="mt-4 w-full resize-none rounded-2xl bg-white/70 px-4 py-3 text-[17px] leading-relaxed outline-none placeholder:text-[color:var(--cowitness-placeholder)] focus:bg-white"
             style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}`, ['--cowitness-placeholder' as string]: PLACEHOLDER }}
           />
-          {f.justUs && (
+          {f.justUs && shares && (
             <button
               type="button" role="switch" aria-checked={justUs} aria-label="Just us" onClick={() => setJustUs(!justUs)}
               className="mt-3 flex h-11 w-full items-center justify-between text-sm" style={{ color: INK }}
