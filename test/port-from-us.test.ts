@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path'
 const ROOT = resolve(__dirname, '..')
 
 // A throwaway "Us" repository with one committed file, and a manifest that ports it.
-function port(source: string, file: Record<string, unknown> = {}) {
+function port(source: string, file: Record<string, unknown> = {}, over: Record<string, unknown> = {}) {
   const us = mkdtempSync(join(tmpdir(), 'us-'))
   const git = (...a: string[]) => execFileSync('git', a, { cwd: us, encoding: 'utf8' }).trim()
   git('init', '-q')
@@ -21,13 +21,14 @@ function port(source: string, file: Record<string, unknown> = {}) {
   const manifest = join(out, 'm.json')
   writeFileSync(manifest, JSON.stringify({
     commit,
+    ...over,
     maps: { client: { '@/lib/us/types': '../types.js', '../theme': './theme.js' } },
     renames: { NOTE_MAX: 'MESSAGE_MAX' },
     urls: [['`/api/us/snaps', '`${clientConfig().apiBase}']],
     configImport: "import { clientConfig } from './config.js'",
     files: [{ from: 'src/a.tsx', to: join(out, 'a.tsx'), map: 'client', ...file }],
   }))
-  execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), manifest], { env: { ...process.env, US_REPO: us } })
+  execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), manifest], { env: { ...process.env, US_REPO: us, PORT_ROOT: out } })
   return readFileSync(join(out, 'a.tsx'), 'utf8')
 }
 
@@ -111,5 +112,43 @@ describe('port-from-us', () => {
     it('refuses a name the source does not declare', () => {
       expect(() => port(source, { only: ['Missing'] })).toThrow()
     })
+
+    it('counts a spread as a use of an import', () => {
+      const out = port(["import { BASE } from './base'", '', 'export const KEEP = { ...BASE, x: 1 }', ''].join('\n'), { only: ['KEEP'] })
+      expect(out).toContain("import { BASE } from './base.js'")
+    })
+
+    it('keeps default and namespace imports that are used, drops those that are not', () => {
+      const out = port(
+        ["import Def from './def'", "import * as NS from './ns'", "import Mixed, { m } from './mixed'", "import Unused from './unused'", '',
+          'export const KEEP = [Def, NS.a, Mixed, m]', ''].join('\n'),
+        { only: ['KEEP'] },
+      )
+      expect(out).toContain("import Def from './def.js'")
+      expect(out).toContain("import * as NS from './ns.js'")
+      expect(out).toContain("import Mixed, { m } from './mixed.js'")
+      expect(out).not.toContain('unused')
+    })
+
+    it('keeps every signature of an overloaded function', () => {
+      const out = port(
+        ['export function f(a: string): string', 'export function f(a: number): number', 'export function f(a: unknown) {', '  return a', '}', ''].join('\n'),
+        { only: ['f'] },
+      )
+      expect(out.match(/export function f/g)).toHaveLength(3)
+    })
+
+    it('throws, naming the identifier, on an import shape it cannot classify', () => {
+      expect(() => port(["import './side-effect'", 'export const KEEP = 1', ''].join('\n'), { only: ['KEEP'] })).toThrow()
+      expect(() => port(['export { KEEP2 }', 'export const KEEP = 1', ''].join('\n'), { only: ['KEEP'] })).toThrow()
+    })
+  })
+
+  it('refuses a destination outside the repository', () => {
+    expect(() => port('const a = 1', { to: '/tmp/escaped-from-repo.ts' })).toThrow(/outside/)
+  })
+
+  it('refuses a commit that is not a hex sha, before running git', () => {
+    expect(() => port('const a = 1', {}, { commit: '--upload-pack=x' })).toThrow(/hex/)
   })
 })
