@@ -1,6 +1,7 @@
 import type { Member } from './types.js'
 import type { Circle } from './features.js'
 import type { Comment, CowitnessSummary, FiledMedia, Recording, Snap, SnapPatch } from './types.js'
+import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from './tag-rules.js'
 import { RuleError, addComment, heartComment, lastMessageFromOther, validateClip, audioExtension, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
 
 // Cowitness, as rules. Pure and synchronous so every one of them is tested without Firebase;
@@ -33,11 +34,12 @@ export function assertCanShare(m: Member, ctx?: Circle): void {
   if (ctx?.witnessing === 'audience' && !ctx.sharers.has(m)) throw new RuleError('you cannot share here', 403)
 }
 
-export function newSnap(m: Member, media: FiledMedia, caption: string, now: string): Omit<Snap, 'id'> {
+export function newSnap(m: Member, media: FiledMedia, caption: string, now: string, extra: { justUs?: true; tags?: string[] } = {}): Omit<Snap, 'id'> {
   return {
     by: m, caption, kind: media.kind, takenAt: media.takenAt, width: media.width, height: media.height,
     paths: media.paths, ...(media.video ? { video: media.video } : {}),
     witnessedAt: null, hiddenAt: null, createdAt: now,
+    ...(extra.justUs ? { justUs: true as const } : {}), ...(extra.tags?.length ? { tags: extra.tags } : {}),
   }
 }
 
@@ -74,6 +76,19 @@ export function applySnapPatch(
       }
       const text = patch.text?.trim()
       return text ? addComment(seen, actor, text, { now, id: opts.id }) : seen
+    }
+    case 'tag': {
+      const may = opts.ctx?.witnessing === 'audience' ? opts.ctx.sharers.has(actor) : s.by === actor
+      if (!may) throw new RuleError('only someone who shares can tag a snap', 403)
+      const ids = validateTags(patch.ids, opts.tags, opts.maxTags ?? TAGS_MAX_DEFAULT)
+      const { tags: _tags, ...rest } = s
+      return ids ? { ...rest, tags: ids } : rest
+    }
+    case 'just-us': {
+      if (s.by !== actor) throw new RuleError('only the person who shared it can change who sees it', 403)
+      validateJustUs(true, opts.justUs === true)
+      const { justUs: _justUs, ...rest } = s
+      return patch.value ? { ...rest, justUs: true } : rest
     }
     // A kind this rule does not apply (an option's patch, or one from a newer client) is refused,
     // never answered with nothing.

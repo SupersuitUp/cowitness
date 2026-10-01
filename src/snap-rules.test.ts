@@ -5,7 +5,7 @@ import {
   markTranscribing, setReactionTranscript, failReactionTranscript, canAutoTranscribe, canRetranscribe,
 } from './snap-rules.js'
 import { RuleError, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
-import type { FiledMedia, Snap } from './types.js'
+import type { FiledMedia, Snap, SnapPatch } from './types.js'
 
 const NOW = '2026-09-27T20:00:00.000Z'
 const PHOTO: FiledMedia = {
@@ -76,10 +76,9 @@ describe('patching a snap', () => {
 
   it('refuses a patch kind it does not apply, rather than answering with nothing', () => {
     let err: unknown
-    try { applySnapPatch(snap(), 'ana', { kind: 'tag', ids: ['t-first'] }) } catch (e) { err = e }
+    try { applySnapPatch(snap(), 'ana', { kind: 'from-a-newer-client' } as unknown as SnapPatch) } catch (e) { err = e }
     expect(err).toBeInstanceOf(RuleError)
     expect(err).toMatchObject({ message: 'unknown patch kind', status: 400 })
-    expect(() => applySnapPatch(snap(), 'ana', { kind: 'just-us', value: true })).toThrow(/unknown patch kind/)
   })
 })
 

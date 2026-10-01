@@ -34,3 +34,23 @@ describe('snap request bodies', () => {
     expect(() => parseSnapPatch({ kind: 'witness', text: 5 })).toThrow(RuleError)
   })
 })
+
+describe('the option fields', () => {
+  it('passes justUs and tags through only when the body carries them', () => {
+    expect(Object.keys(parseSnapPhotoBody({ photoId: 'p1' })).sort()).toEqual(['caption', 'clientTakenAt', 'photoId'])
+    expect(Object.keys(parseSnapVideoBody({ photoId: 'v1', durationSec: 1, width: 1, height: 1 })).sort()).toEqual(['caption', 'meta', 'photoId'])
+    expect(parseSnapPhotoBody({ photoId: 'p1', justUs: true, tags: ['t-first'] })).toMatchObject({ justUs: true, tags: ['t-first'] })
+    expect(parseSnapVideoBody({ photoId: 'v1', durationSec: 1, width: 1, height: 1, tags: [] })).toMatchObject({ tags: [] })
+  })
+  it('reads the two new patches where their option is on', () => {
+    const on = { tags: true, justUs: true }
+    expect(parseSnapPatch({ kind: 'tag', ids: ['t-first'] }, on)).toEqual({ kind: 'tag', ids: ['t-first'] })
+    expect(parseSnapPatch({ kind: 'just-us', value: false }, on)).toEqual({ kind: 'just-us', value: false })
+    expect(() => parseSnapPatch({ kind: 'tag', ids: 't-first' }, on)).toThrow(/ids must be a list/)
+    expect(() => parseSnapPatch({ kind: 'just-us', value: 'yes' }, on)).toThrow(/value must be a boolean/)
+  })
+  it('refuses them with the words it always used where their option is off', () => {
+    expect(() => parseSnapPatch({ kind: 'tag', ids: [] })).toThrow(/unknown patch kind/)
+    expect(() => parseSnapPatch({ kind: 'just-us', value: true }, { tags: true })).toThrow(/unknown patch kind/)
+  })
+})
