@@ -156,6 +156,31 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         return Response.json(await store.savePromptSettings(m, await req.json()))
       }),
     },
+    // Body: { snapId, contentType, size, durationSec }. The PUT sends exactly `requiredHeaders`.
+    voiceUploadUrl: {
+      POST: (req: Request) => handle(async () => Response.json(await store.voiceUploadUrl(await signedIn(req), await req.json()))),
+    },
+    // Body: { snapId, contentType, durationSec, caption?, language?, justUs?, tags? }. The bytes are
+    // already in storage. Announced and transcribed only when this call created the snap.
+    voice: {
+      POST: (req: Request) => handle(async () => {
+        const m = await signedIn(req)
+        const { snap, created } = await store.fileVoiceSnap(m, await req.json())
+        if (created) {
+          filed(m, snap)
+          if (host.transcription) after(async () => { try { await store.transcribeVoiceSnap(snap.id) } catch (err) { console.error('voice snap transcription failed', err) } })
+        }
+        return Response.json(snap)
+      }),
+    },
+    // Body: { language? }. Transcribes a voice snap again. No re-recording.
+    voiceTranscribe: {
+      POST: (req: Request, { params }: IdParams) => handle(async () => {
+        const m = await signedIn(req)
+        const { language } = (await req.json().catch(() => ({}))) as { language?: unknown }
+        return Response.json(await store.retranscribeVoiceSnap(m, (await params).id, language))
+      }),
+    },
     // Body: { language? }. Transcribes a reaction that is already filed, again. No re-recording.
     reactionTranscribe: {
       POST: (req: Request, { params }: ReactionParams) => handle(async () => {

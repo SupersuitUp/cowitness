@@ -1,7 +1,7 @@
 import 'server-only'
 import type { DocumentSnapshot } from 'firebase-admin/firestore'
 import { RuleError, isRuleError } from '../errors.js'
-import { CLIP_MAX_BYTES } from '../shared-rules.js'
+import { CLIP_CONTENT_TYPES, CLIP_MAX_BYTES, validateClip } from '../shared-rules.js'
 import {
   addVoiceReaction, applySnapPatch, archiveOf, assertCanShare, canAutoTranscribe, canRetranscribe, canSeeSnap, coverOf, cowitnessTile,
   failReactionTranscript, markTranscribing, newSnap, openOf, queueOf, reactionAudioPath, reactionTicket,
@@ -13,7 +13,10 @@ import { parsePromptPatch, promptsDue, validPromptTimes } from '../prompts.js'
 import { zoned } from '../zoned.js'
 import { circleOf, resolveFeatures, type Circle, type CowitnessFeatures } from '../features.js'
 import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from '../tag-rules.js'
-import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView, TagChoice } from '../types.js'
+import {
+  VOICE_UPLOADER_KEY, failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath,
+} from '../voice-rules.js'
+import type { CowitnessSummary, MediaSnap, PromptSettings, Recording, Snap, SnapPatch, SnapView, TagChoice, VoiceInfo } from '../types.js'
 import type { CowitnessHost } from './host.js'
 
 // Cowitness at the edge: read, call one rule, write. Every decision is in ../snap-rules.ts.
@@ -52,7 +55,11 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   assertHostFits(host, features)
   const snaps = () => host.db().collection(host.collection)
   const snapFrom = (doc: DocumentSnapshot): Snap<M> => ({ id: doc.id, ...(doc.data() as Omit<Snap<M>, 'id'>) })
-  const withUrls = async (s: Snap<M>): Promise<SnapView<M>> => ({ ...s, ...(await host.media.urls(s as MediaSnap<M>)) })
+  // A voice snap has no picture, so it never goes near the app's media pipeline: its one URL is
+  // its recording's, signed behind the same visibility check as every other snap's media.
+  const withUrls = async (s: Snap<M>): Promise<SnapView<M>> => (s.kind === 'voice'
+    ? { ...s, thumbUrl: null, displayUrl: null, ...(s.voice ? { audioUrl: await host.media.signedUrl(s.voice.path) } : {}) }
+    : { ...s, ...(await host.media.urls(s as MediaSnap<M>)) })
   // The one image a tile shows, signed alone; a row the page never draws (the streak's) signs nothing.
   const tileRow = async (s: Snap<M>): Promise<SnapRow> => {
     const path = thumbPathOf(s)
@@ -288,6 +295,129 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     return finishTranscription(snapId, commentId, marked, lang)
   }
 
+  const voiceOn = () => { if (!features.voiceSnaps) throw new RuleError('voice notes are not on here', 404) }
+  const voiceFile = (snapId: string, contentType: string) => host.storage.bucket().file(voiceSnapPath(host.storage.prefix, snapId, contentType))
+  const audioType = (v: unknown) => {
+    const ct = typeof v === 'string' ? v.split(';')[0].trim() : ''
+    if (!(CLIP_CONTENT_TYPES as readonly string[]).includes(ct)) throw new RuleError('unsupported audio type', 400)
+    return ct
+  }
+  // The bytes at a voice path are someone's only if the signed PUT that put them there was issued
+  // to them: that PUT had to send the uploader header, so storage keeps who it was. Bytes nobody
+  // signed for, or that someone else uploaded, are a ticket that is not this person's.
+  async function ownUpload(m: M, file: ReturnType<typeof voiceFile>): Promise<{ size: number; contentType?: string }> {
+    const [md] = await file.getMetadata()
+    const meta = (md as { metadata?: Record<string, unknown> }).metadata
+    if (meta?.[VOICE_UPLOADER_KEY] !== m) throw new RuleError('that recording is not yours to file', 403)
+    return { size: Number(md.size), contentType: typeof md.contentType === 'string' ? md.contentType : undefined }
+  }
+
+  // The signed PUT a voice note goes up with, straight to storage. The id is the phone's own held
+  // recording's, so a resend reuses it; if the bytes are already there nothing is signed, and a
+  // second PUT to the same id is refused by storage itself (create-once).
+  async function voiceUploadUrl(
+    m: M, input: { snapId: unknown; contentType: unknown; size: unknown; durationSec: unknown },
+  ): Promise<{ snapId: string; uploaded: true } | { snapId: string; url: string; requiredHeaders: Record<string, string> }> {
+    voiceOn()
+    assertCanShare(m, await circle())
+    const snapId = validateClientId(input.snapId, 'snapId')
+    const { contentType } = validateClip(input)
+    const file = voiceFile(snapId, contentType)
+    const [exists] = await file.exists()
+    if (exists) {
+      await ownUpload(m, file)
+      return { snapId, uploaded: true as const }
+    }
+    const extensionHeaders = {
+      'x-goog-content-length-range': `0,${CLIP_MAX_BYTES}`, 'x-goog-if-generation-match': '0', [`x-goog-meta-${VOICE_UPLOADER_KEY}`]: m as string,
+    }
+    const [url] = await file.getSignedUrl({ version: 'v4', action: 'write', expires: Date.now() + REACTION_UPLOAD_WINDOW_MS, contentType, extensionHeaders })
+    return { snapId, url, requiredHeaders: { 'Content-Type': contentType, ...extensionHeaders } }
+  }
+
+  // Filed once per id: the same person filing the same id again gets the snap back (a resend after
+  // a lost answer); anyone else is refused, so an id can never be taken over. Everything the phone
+  // says is checked before storage is read, and the size is the bytes that actually arrived.
+  async function fileVoiceSnap(
+    m: M, input: { snapId: unknown; contentType: unknown; durationSec: unknown; caption?: unknown; language?: unknown; justUs?: unknown; tags?: unknown },
+  ): Promise<{ snap: Snap<M>; created: boolean }> {
+    voiceOn()
+    const snapId = validateClientId(input.snapId, 'snapId')
+    const caption = validateCaption(input.caption)
+    const extra = await filingExtras(m, input)
+    const ct = audioType(input.contentType)
+    const ref = snaps().doc(snapId)
+    const existing = (s: Snap<M>) => {
+      if (s.by !== m || s.kind !== 'voice') throw new RuleError('that snap already exists', 409)
+      return { snap: s, created: false }
+    }
+    const prior = await ref.get()
+    if (prior.exists) return existing(snapFrom(prior))
+    const file = voiceFile(snapId, ct)
+    const [exists] = await file.exists()
+    if (!exists) throw new RuleError('that recording did not finish uploading', 404)
+    const stored = await ownUpload(m, file)
+    if (stored.contentType && stored.contentType.split(';')[0].trim() !== ct) throw new RuleError('that recording is not the type it was sent as', 400)
+    const { contentType, durationSec } = validateClip({ contentType: ct, size: stored.size, durationSec: input.durationSec })
+    const language = host.transcription ? spokenLanguage(input.language, host.transcription.languages) : undefined
+    // With no transcriber the recording is filed settled: playable, with no words to wait for.
+    const voice: VoiceInfo = {
+      path: file.name, contentType, durationSec, text: '',
+      ...(language && language !== 'auto' ? { language } : {}), ...(host.transcription ? { status: 'transcribing' as const } : {}),
+    }
+    return host.db().runTransaction(async (tx) => {
+      const doc = await tx.get(ref)
+      if (doc.exists) return existing(snapFrom(doc))
+      const data = newVoiceSnap(m, voice, caption, nowIso(), extra) as Omit<Snap<M>, 'id'>
+      tx.set(ref, data)
+      return { snap: { id: snapId, ...data }, created: true }
+    })
+  }
+
+  // The model call and the write of what came back, shared by the auto path and Try again.
+  async function finishVoiceTranscription(snapId: string, marked: Snap<M>, language: string): Promise<Snap<M>> {
+    const t = transcriber()
+    const v = marked.voice!
+    let words: string
+    try {
+      const f = host.storage.bucket().file(v.path)
+      const [exists] = await f.exists()
+      if (!exists) throw new RuleError('that recording is no longer in storage', 404)
+      const [audio] = await f.download()
+      words = await t.transcribe(audio, v.contentType, { language, speaker: marked.by })
+    } catch (err) {
+      console.error(`transcribeVoiceSnap: ${v.path}`, err)
+      const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
+      return rewrite(snapId, (s) => failVoiceTranscript(s, reason) as Snap<M>)
+    }
+    return rewrite(snapId, (s) => setVoiceTranscript(s, words) as Snap<M>)
+  }
+
+  // The AUTO path, scheduled by the voice route right after it files a snap. A no-op unless the
+  // recording is still exactly as filed, so it can never run twice over one.
+  async function transcribeVoiceSnap(snapId: string, language?: unknown): Promise<Snap<M>> {
+    const lang = spokenLanguage(language, transcriber().languages)
+    let ran = true
+    const marked = await rewrite(snapId, (s) => {
+      if (!s.voice || !canAutoTranscribe(s.voice)) { ran = false; return s }
+      return markVoiceTranscribing(s, lang === 'auto' ? s.voice.language : lang, { now: nowIso() }) as Snap<M>
+    })
+    return ran ? finishVoiceTranscription(snapId, marked, marked.voice?.language ?? lang) : marked
+  }
+
+  // Try again, from anyone who can see the snap; refused with a conflict while a live run is going.
+  async function retranscribeVoiceSnap(m: M, snapId: string, language?: unknown): Promise<Snap<M>> {
+    const lang = spokenLanguage(language, transcriber().languages)
+    const ctx = await circle()
+    const marked = await rewrite(snapId, (s) => {
+      if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
+      if (!s.voice) throw new RuleError('voice note not found', 404)
+      if (!canRetranscribe(s.voice, s.createdAt, nowIso())) throw new RuleError('this voice note is still being transcribed', 409)
+      return markVoiceTranscribing(s, lang === 'auto' ? undefined : lang, { now: nowIso() }) as Snap<M>
+    })
+    return finishVoiceTranscription(snapId, marked, lang)
+  }
+
   const promptsOn = () => {
     if (!features.prompts || !host.prompts) throw new RuleError('reminders are not on here', 404)
     return host.prompts
@@ -352,6 +482,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     finalizeSnapPhoto, finalizeSnapVideo, readSnaps, listSnaps, listCowitness, listWitnessed, getSnapView, patchSnap,
     listQueue, cowitnessSummary, reactionUploadUrl, attachReaction, reactionAudioUrl, transcribeReaction, retranscribeReaction,
     sendDuePrompts, promptSettings, savePromptSettings,
+    voiceUploadUrl, fileVoiceSnap, transcribeVoiceSnap, retranscribeVoiceSnap,
   }
 }
 

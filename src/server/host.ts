@@ -42,7 +42,7 @@ export interface CowitnessHost<M extends string> {
   log?(message: string, err: unknown): void
   /** The list snaps are kept in. */
   collection: string
-  /** Where spoken reactions are stored: `${prefix}snaps-audio/<snap>/<id>.<ext>`. */
+  /** Where spoken reactions are stored, `${prefix}snaps-audio/<snap>/<id>.<ext>`, and voice snaps, `${prefix}snaps-voice/<snap>.<ext>`. */
   storage: { bucket(): Bucket; prefix: string }
   media: {
     /** Signed URLs for one snap's photo or video (and, where the app has them, its stream and chapters). */
