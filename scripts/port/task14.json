@@ -144,7 +144,21 @@
       "to": "src/client/add-snap.tsx",
       "map": "client",
       "renames": true,
-      "urls": true
+      "urls": true,
+      "replace": [
+        [
+          "placeholder:text-us-placeholder",
+          "placeholder:text-[color:var(--cowitness-placeholder)]"
+        ],
+        [
+          "style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}` }}\n          />",
+          "style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}`, ['--cowitness-placeholder' as string]: PLACEHOLDER }}\n          />"
+        ],
+        [
+          "import { DANGER, HAIRLINE, INK, MUTED, ON_INK, SERIF } from './theme.js'",
+          "import { DANGER, HAIRLINE, INK, MUTED, ON_INK, PLACEHOLDER, SERIF } from './theme.js'"
+        ]
+      ]
     },
     {
       "from": "src/app/components/add-snap.test.tsx",
@@ -222,6 +236,30 @@
         [
           "asking for the microphone she\n  // can already type",
           "asking for the microphone the\n  // reader can already type"
+        ],
+        [
+          "A second history.back() would leave /cowitness, not the session.",
+          "A second history.back() would leave the Cowitness page, not the session."
+        ],
+        [
+          "import { SERIF } from './theme.js'",
+          "import { ACCENT, ACCENT_SOFT, SERIF } from './theme.js'"
+        ],
+        [
+          "bg-us-accent motion-reduce",
+          "motion-reduce"
+        ],
+        [
+          "re:(motion-reduce:animate-none\")( aria-hidden=\"true\" />)",
+          "$1 style={{ backgroundColor: ACCENT }}$2"
+        ],
+        [
+          "text-sm text-us-accent-soft",
+          "text-sm"
+        ],
+        [
+          "re:(<span aria-live=\"polite\" className=\"text-sm\")>",
+          "$1 style={{ color: ACCENT_SOFT }}>"
         ]
       ]
     },

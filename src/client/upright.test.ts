@@ -38,7 +38,7 @@ describe('how many clockwise quarter turns stand a frame upright', () => {
 
   it('when the screen has turned with the phone, the camera already delivers it upright: no turn', () => {
     // Rotation lock off: iOS turns the page AND the camera stream, so turning again would put the
-    // picture back on its side (what Ana saw on 2026-09-29).
+    // picture back on its side.
     expect(quarterTurnsFrom(RIGHT_EDGE_UP, 'environment', 90)).toBe(0)
     expect(quarterTurnsFrom(LEFT_EDGE_UP, 'environment', -90)).toBe(0)
     expect(quarterTurnsFrom(LEFT_EDGE_UP, 'user', 270)).toBe(0)

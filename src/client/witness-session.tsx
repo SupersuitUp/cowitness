@@ -18,7 +18,7 @@ import { reactionKey, sendHeld, sendReaction } from './reaction-send.js'
 import {
   beginRecording, endRecording, forget, indexedDbVault, keepChunk, memoryVault, newRecordingId, type VaultStore,
 } from './recording-vault.js'
-import { SERIF } from './theme.js'
+import { ACCENT, ACCENT_SOFT, SERIF } from './theme.js'
 
 interface Props {
   queue: SnapView[]; me: Member; names: MemberNames; onClose(): void
@@ -79,7 +79,7 @@ export function WitnessSession({ queue, names, onClose, mic, listen }: Props) {
   const listening = micState === 'on' && mode === 'voice' && !clock.capped
 
   // Every way out goes through here exactly once: the ×, Close, and the self-close after the
-  // last snap. A second history.back() would leave /cowitness, not the session.
+  // last snap. A second history.back() would leave the Cowitness page, not the session.
   const left = useRef(false)
   const autoClose = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leave = () => {
@@ -349,7 +349,7 @@ export function WitnessSession({ queue, names, onClose, mic, listen }: Props) {
 
             {listening && (
               <div className="mt-3 flex items-center gap-3">
-                <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-us-accent motion-reduce:animate-none" aria-hidden="true" />
+                <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full motion-reduce:animate-none" style={{ backgroundColor: ACCENT }} aria-hidden="true" />
                 <span className="text-sm">Listening</span>
                 <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
                   <span className="block h-full rounded-full bg-white/70" style={{ width: `${meterWidth(clock.level)}%` }} />
@@ -376,7 +376,7 @@ export function WitnessSession({ queue, names, onClose, mic, listen }: Props) {
             )}
             <div className="mt-3 flex items-center justify-between gap-3">
               {listening && <button type="button" onClick={typeInstead} className="h-12 rounded-full border border-white/40 px-5 text-sm">Type instead</button>}
-              <span aria-live="polite" className="text-sm text-us-accent-soft">{failed ? 'Not saved. Try again.' : ''}</span>
+              <span aria-live="polite" className="text-sm" style={{ color: ACCENT_SOFT }}>{failed ? 'Not saved. Try again.' : ''}</span>
               <button type="button" onClick={() => { void next() }} disabled={saving} className="h-12 rounded-full bg-white px-8 text-[17px] font-medium text-black disabled:opacity-50">
                 {last ? 'Done' : 'Next'}
               </button>

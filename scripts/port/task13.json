@@ -282,7 +282,13 @@
       "from": "src/app/components/upright.test.ts",
       "to": "src/client/upright.test.ts",
       "map": "client",
-      "renames": true
+      "renames": true,
+      "replace": [
+        [
+          "re: \\(what Ana saw on \\d{4}-\\d\\d-\\d\\d\\)",
+          ""
+        ]
+      ]
     },
     {
       "from": "src/app/components/history-layer.ts",

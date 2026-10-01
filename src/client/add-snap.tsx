@@ -10,7 +10,7 @@ import { openStream } from './dual-camera.js'
 import { askForMotion } from './upright.js'
 import { PickedPreview } from './picked-preview.js'
 import { postSnap, type SentSnap } from './snap-upload.js'
-import { DANGER, HAIRLINE, INK, MUTED, ON_INK, SERIF } from './theme.js'
+import { DANGER, HAIRLINE, INK, MUTED, ON_INK, PLACEHOLDER, SERIF } from './theme.js'
 
 // Two ways to a snap and one way to send it. Take a snap opens the camera and Choose a photo
 // opens the library; both happen inside the tap, or iOS refuses them. Either one ends as a file,
@@ -117,8 +117,8 @@ export function AddSnap() {
             onChange={(e) => { setCaption(e.target.value); if (state === 'failed') setState('idle') }}
             placeholder="Add a caption, if you want"
             rows={2}
-            className="mt-4 w-full resize-none rounded-2xl bg-white/70 px-4 py-3 text-[17px] leading-relaxed outline-none placeholder:text-us-placeholder focus:bg-white"
-            style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}` }}
+            className="mt-4 w-full resize-none rounded-2xl bg-white/70 px-4 py-3 text-[17px] leading-relaxed outline-none placeholder:text-[color:var(--cowitness-placeholder)] focus:bg-white"
+            style={{ color: INK, fontFamily: SERIF, border: `1px solid ${HAIRLINE}`, ['--cowitness-placeholder' as string]: PLACEHOLDER }}
           />
           <div className="mt-3 flex items-center justify-between">
             <span aria-live="polite" className="text-sm" style={{ color: state === 'failed' ? DANGER : MUTED }}>
