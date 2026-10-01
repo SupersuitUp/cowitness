@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     # npm checks the environment claim inside the OIDC token, so a record that NAMES an
     # environment the job does not declare fails as ENEEDAUTH, with nothing said about
-    # environments. The trusted-publisher record for this package is created
+    # environments. The trusted-publisher record for this package was created on 2026-10-01,
     # right after the first publish of 0.1.0 (by hand, with web 2FA, because npm only attaches
     # a trusted publisher to a package that already exists on the registry), with
     #     npm trust github @supersuit/cowitness --file publish.yml \
