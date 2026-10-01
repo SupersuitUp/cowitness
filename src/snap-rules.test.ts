@@ -73,6 +73,14 @@ describe('patching a snap', () => {
     expect(() => applySnapPatch(hidden, 'ana', { kind: 'unhide' })).toThrow(RuleError)
     expect(() => applySnapPatch(hidden, 'ana', { kind: 'comment', text: 'hi' })).toThrow(RuleError)
   })
+
+  it('refuses a patch kind it does not apply, rather than answering with nothing', () => {
+    let err: unknown
+    try { applySnapPatch(snap(), 'ana', { kind: 'tag', ids: ['t-first'] }) } catch (e) { err = e }
+    expect(err).toBeInstanceOf(RuleError)
+    expect(err).toMatchObject({ message: 'unknown patch kind', status: 400 })
+    expect(() => applySnapPatch(snap(), 'ana', { kind: 'just-us', value: true })).toThrow(/unknown patch kind/)
+  })
 })
 
 describe('the archive and the tile', () => {

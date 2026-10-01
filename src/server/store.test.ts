@@ -183,3 +183,20 @@ describe('stored data', () => {
     expect(raw).toMatchObject({ by: 'ben', paths: { thumb: 'p/thumb/x.jpg' }, witnessedAt: null, hiddenAt: null })
   })
 })
+
+describe('a host must supply what its options need', () => {
+  it('builds with no options, as before', () => {
+    expect(() => createCowitnessStore(fakeHost().host)).not.toThrow()
+  })
+  it('names the missing part for each option that needs one', () => {
+    const { host } = fakeHost()
+    expect(() => createCowitnessStore({ ...host, features: { witnessing: 'audience' } })).toThrow(/people\(\)/)
+    expect(() => createCowitnessStore({ ...host, features: { justUs: true } })).toThrow(/people\(\)/)
+    expect(() => createCowitnessStore({ ...host, features: { tags: true } })).toThrow(/tags\.list/)
+    expect(() => createCowitnessStore({ ...host, features: { prompts: true } })).toThrow(/prompts/)
+    expect(() => createCowitnessStore({ ...host, features: { voiceSnaps: true } })).not.toThrow()
+  })
+  it('says which options it runs with', () => {
+    expect(createCowitnessStore(fakeHost().host).features.witnessing).toBe('each-other')
+  })
+})

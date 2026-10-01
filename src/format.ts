@@ -1,10 +1,10 @@
 // Pure helpers for Cowitness screens. Kept out of any 'use client' file because the server
 // render calls snapRow(), and a function exported from a client module cannot be called there.
 import type { Member } from './types.js'
-import type { MediaKind, Snap } from './types.js'
+import type { Snap, SnapKind } from './types.js'
 
 export interface SnapRow {
-  id: string; by: Member; caption: string; kind: MediaKind
+  id: string; by: Member; caption: string; kind: SnapKind
   thumbUrl: string | null; durationSec: number | null
   createdAt: string; witnessedAt: string | null; hidden: boolean
 }

@@ -49,6 +49,10 @@ export function applySnapPatch(s: Snap, actor: Member, patch: SnapPatch, opts: {
       const text = patch.text?.trim()
       return text ? addComment(seen, actor, text, { now, id: opts.id }) : seen
     }
+    // A kind this rule does not apply (an option's patch, or one from a newer client) is refused,
+    // never answered with nothing.
+    default:
+      throw new RuleError('unknown patch kind', 400)
   }
 }
 

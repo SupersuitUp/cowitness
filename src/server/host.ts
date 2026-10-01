@@ -1,6 +1,7 @@
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore'
 import type { getStorage } from 'firebase-admin/storage'
-import type { Comment, FiledMedia, MediaUrls, Snap, SnapPatch } from '../types.js'
+import type { CowitnessFeatures, Person } from '../features.js'
+import type { Comment, FiledMedia, MediaSnap, MediaUrls, PromptPerson, PromptSettings, Snap, SnapPatch, TagChoice } from '../types.js'
 
 // The bucket type comes from firebase-admin's own surface: @google-cloud/storage is its transitive
 // dependency, and pnpm does not hoist it, so importing it directly would not resolve in every app.
@@ -45,7 +46,7 @@ export interface CowitnessHost<M extends string> {
   storage: { bucket(): Bucket; prefix: string }
   media: {
     /** Signed URLs for one snap's photo or video (and, where the app has them, its stream and chapters). */
-    urls(s: Snap<M>): Promise<MediaUrls>
+    urls(s: MediaSnap<M>): Promise<MediaUrls>
     /** A short-lived read URL for one stored file. */
     signedUrl(path: string): Promise<string>
     /**
@@ -69,6 +70,10 @@ export interface CowitnessHost<M extends string> {
     witnessed(m: M, s: Snap<M>, firstWords: string): void
     message(m: M, s: Snap<M>, c: Comment<M>): void
     heart(m: M, s: Snap<M>, c: Comment<M>): void
+    /** Optional: a spoken reaction was filed (its words arrive later). Without it, a spoken reaction is announced as nothing. */
+    spoken?(m: M, s: Snap<M>, c: Comment<M>): void
+    /** Optional: a snap's tags were set. `ids` is the full list now on the snap. */
+    tagged?(m: M, s: Snap<M>, ids: string[]): void
   }
   /** Pictures sent in a snap's messages, kept by the app with every other conversation's pictures. */
   commentImages?: {
@@ -80,5 +85,24 @@ export interface CowitnessHost<M extends string> {
     /** The languages a speaker may name; anything else is 'auto'. */
     languages: readonly string[]
     transcribe(audio: Buffer, contentType: string, opts: { language: string; speaker: M }): Promise<string>
+  }
+  /** Which options are on. Absent: none, which is how the package behaved before options existed. */
+  features?: Partial<CowitnessFeatures>
+  /** Each person's part. Required when witnessing is 'audience' or justUs is on. */
+  people?(): Promise<Person<M>[]>
+  /** The list a snap is tagged from. Required when tags is on. `max` tags per snap, default 1. */
+  tags?: { list(): Promise<TagChoice[]>; max?: number }
+  /**
+   * Capture reminders. Required when prompts is on. `collection` holds one claim per reminder sent
+   * (its id is the reminder's `<day>@<HH:MM>`), so two overlapping runs never send one twice.
+   * `people` are the people reminded, with their own times; `save` stores one person's times;
+   * `nudge` is what a reminder becomes (a push, in most apps). The package never sends one itself.
+   */
+  prompts?: {
+    collection: string
+    timeZone: string
+    people(): Promise<PromptPerson<M>[]>
+    save(m: M, s: PromptSettings): Promise<void>
+    nudge(m: M, slotKey: string): void | Promise<void>
   }
 }

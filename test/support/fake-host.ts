@@ -4,7 +4,8 @@ import { fakeBucket } from './fake-bucket.js'
 import type { CowitnessHost } from '../../src/server/host.js'
 import type { FiledMedia } from '../../src/types.js'
 
-export type M = 'ana' | 'ben'
+// `cy` is only ever used by the audience tests.
+export type M = 'ana' | 'ben' | 'cy'
 export const PHOTO: FiledMedia = {
   kind: 'photo', takenAt: '2026-09-27T14:03:00', width: 3024, height: 4032,
   paths: { original: 'p/original/x.jpg', display: 'p/display/x.jpg', thumb: 'p/thumb/x.jpg' },
@@ -12,7 +13,7 @@ export const PHOTO: FiledMedia = {
 
 // A whole host, every part a stand-in: the app's pipeline files media into the record the store
 // hands it, signing is visible in the URL, and the transcriber says 'hello there'.
-export function fakeHost(opts: { collection?: string; prefix?: string; transcription?: CowitnessHost<M>['transcription'] | null; isRefusal?: CowitnessHost<M>['isRefusal'] } = {}) {
+export function fakeHost(opts: { collection?: string; prefix?: string; transcription?: CowitnessHost<M>['transcription'] | null; isRefusal?: CowitnessHost<M>['isRefusal']; features?: CowitnessHost<M>['features'] } = {}) {
   const f = fakeFirestore()
   const b = fakeBucket()
   const host: CowitnessHost<M> = {
@@ -20,6 +21,7 @@ export function fakeHost(opts: { collection?: string; prefix?: string; transcrip
     db: () => f.db,
     collection: opts.collection ?? 'snaps',
     ...(opts.isRefusal ? { isRefusal: opts.isRefusal } : {}),
+    ...(opts.features ? { features: opts.features } : {}),
     storage: { bucket: () => b.bucket, prefix: opts.prefix ?? 'p/' },
     media: {
       urls: vi.fn(async (s) => ({ thumbUrl: s.paths.thumb ? `signed:${s.paths.thumb}` : null, displayUrl: s.paths.display ? `signed:${s.paths.display}` : null })),

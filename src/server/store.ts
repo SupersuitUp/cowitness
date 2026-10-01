@@ -9,7 +9,8 @@ import {
 } from '../snap-rules.js'
 import { snapRow, type SnapRow } from '../format.js'
 import { spokenLanguage } from '../language.js'
-import type { CowitnessSummary, Recording, Snap, SnapPatch, SnapView } from '../types.js'
+import { resolveFeatures, type CowitnessFeatures } from '../features.js'
+import type { CowitnessSummary, MediaSnap, Recording, Snap, SnapPatch, SnapView } from '../types.js'
 import type { CowitnessHost } from './host.js'
 
 // Cowitness at the edge: read, call one rule, write. Every decision is in ../snap-rules.ts.
@@ -18,10 +19,22 @@ import type { CowitnessHost } from './host.js'
 const REACTION_UPLOAD_WINDOW_MS = 15 * 60 * 1000
 const nowIso = () => new Date().toISOString()
 
+// An option the app turned on without the part it needs would fail on a person's first tap; it
+// fails here instead, when the app starts, naming what is missing.
+export function assertHostFits<M extends string>(host: CowitnessHost<M>, f: CowitnessFeatures): void {
+  const missing: string[] = []
+  if ((f.witnessing === 'audience' || f.justUs) && !host.people) missing.push('people() (for the audience kind or "just us")')
+  if (f.tags && !host.tags?.list) missing.push('tags.list (for tags)')
+  if (f.prompts && !host.prompts) missing.push('prompts (for capture reminders)')
+  if (missing.length) throw new Error(`cowitness: the host turned on options without ${missing.join(', ')}`)
+}
+
 export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
+  const features = resolveFeatures(host.features)
+  assertHostFits(host, features)
   const snaps = () => host.db().collection(host.collection)
   const snapFrom = (doc: DocumentSnapshot): Snap<M> => ({ id: doc.id, ...(doc.data() as Omit<Snap<M>, 'id'>) })
-  const withUrls = async (s: Snap<M>): Promise<SnapView<M>> => ({ ...s, ...(await host.media.urls(s)) })
+  const withUrls = async (s: Snap<M>): Promise<SnapView<M>> => ({ ...s, ...(await host.media.urls(s as MediaSnap<M>)) })
   // The one image a tile shows, signed alone; a row the page never draws (the streak's) signs nothing.
   const tileRow = async (s: Snap<M>): Promise<SnapRow> => {
     const path = thumbPathOf(s)
@@ -221,6 +234,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   }
 
   return {
+    features,
     finalizeSnapPhoto, finalizeSnapVideo, readSnaps, listSnaps, listCowitness, listWitnessed, getSnapView, patchSnap,
     listQueue, cowitnessSummary, reactionUploadUrl, attachReaction, reactionAudioUrl, transcribeReaction, retranscribeReaction,
   }
