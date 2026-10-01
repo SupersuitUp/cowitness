@@ -65,6 +65,11 @@ export function assertMayRetranscribeVoice(s: Snap, m: Member, now: string): voi
   if (s.by !== m && v.status !== 'failed' && v.status !== 'transcribing') throw new RuleError('only the person who shared it can transcribe it again', 403)
 }
 
+// The same rule as a yes or no, for a screen deciding whether to offer it at all.
+export function mayRetranscribeVoice(s: Snap, m: Member, now: string): boolean {
+  try { assertMayRetranscribeVoice(s, m, now); return true } catch { return false }
+}
+
 // Whether a finished run may still write: only while the snap is in the very run it started. A run
 // overtaken by a newer one (a Try again after it stalled) is dropped, so it can neither overwrite the
 // newer words nor clear the newer run's status.

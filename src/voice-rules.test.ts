@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { snapRow } from './format.js'
-import { assertMayRetranscribeVoice, isVoiceRun, voiceSnapPaths, failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath } from './voice-rules.js'
+import { assertMayRetranscribeVoice, mayRetranscribeVoice, isVoiceRun, voiceSnapPaths, failVoiceTranscript, markVoiceTranscribing, newVoiceSnap, setVoiceTranscript, validateClientId, voiceSnapPath } from './voice-rules.js'
 
 const NOW = '2026-09-30T12:00:00.000Z'
 const voice = { path: 'p/snaps-voice/v-abcdefgh.m4a', contentType: 'audio/mp4', durationSec: 9, status: 'transcribing' as const, text: '' }
@@ -49,5 +49,26 @@ describe('a voice snap', () => {
     const live = markVoiceTranscribing(s, undefined, { now: NOW })
     expect(() => assertMayRetranscribeVoice(live, 'ana', NOW)).toThrow(/still being transcribed/)
     expect(() => assertMayRetranscribeVoice(live, 'ben', '2026-09-30T12:06:00.000Z')).not.toThrow()
+  })
+  it('answers, as a yes or no the phone can draw from, exactly what the refusal enforces', () => {
+    const s = { id: 'v1', ...newVoiceSnap('ana', voice, '', NOW, {}) }
+    const done = setVoiceTranscript(s, 'hi')
+    const failed = failVoiceTranscript(s, 'x')
+    const live = markVoiceTranscribing(s, undefined, { now: NOW })
+    const LATER = '2026-09-30T12:06:00.000Z'
+    const photo = { ...done, kind: 'photo' as const, voice: undefined }
+    const cases: [typeof s, string, string, boolean][] = [
+      [done, 'ana', NOW, true], [done, 'ben', NOW, false],
+      [failed, 'ana', NOW, true], [failed, 'ben', NOW, true],
+      [live, 'ana', NOW, false], [live, 'ben', NOW, false],
+      [live, 'ana', LATER, true], [live, 'ben', LATER, true],
+      [photo, 'ana', NOW, false],
+    ]
+    for (const [snap, m, now, want] of cases) {
+      expect(mayRetranscribeVoice(snap, m, now), `${snap.voice?.status ?? snap.kind} ${m} ${now}`).toBe(want)
+      let allowed = true
+      try { assertMayRetranscribeVoice(snap, m, now) } catch { allowed = false }
+      expect(allowed).toBe(want)
+    }
   })
 })
