@@ -445,5 +445,9 @@
         "insertExifDate"
       ]
     }
+  ],
+  "diverged": [
+    "src/client/recording-vault.ts",
+    "src/client/snap-upload.ts"
   ]
 }

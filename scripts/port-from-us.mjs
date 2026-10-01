@@ -12,6 +12,10 @@
 // A file entry may carry "only": [names]. The output is then just those top-level declarations,
 // verbatim, plus the import lines filtered to the names they use, so a reference copy is produced
 // from the pinned source and never trimmed by hand.
+//
+// A manifest may carry "diverged": [to, ...], the destinations this package has changed on purpose
+// since they were ported. They are never written again, so a re-port cannot undo that work, and the
+// reproduction test compares every other file. An entry naming no file in the manifest is refused.
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
@@ -106,7 +110,13 @@ function only(text, names, file) {
 const ROOT = resolve(process.env.PORT_ROOT ?? join(dirname(fileURLToPath(import.meta.url)), '..'))
 if (!/^[0-9a-f]{7,40}$/i.test(String(manifest.commit))) throw new Error(`commit must be a hex sha, got ${JSON.stringify(manifest.commit)}`)
 
+const diverged = new Set(manifest.diverged ?? [])
+for (const d of diverged) {
+  if (!manifest.files.some((f) => f.to === d)) throw new Error(`diverged entry ${d} names no file in this manifest`)
+}
+
 for (const f of manifest.files) {
+  if (diverged.has(f.to)) { console.log(`${f.from} -> ${f.to} (diverged, left as it is)`); continue }
   const map = manifest.maps[f.map]
   const dest = resolve(ROOT, f.to)
   if (dest !== ROOT && !dest.startsWith(ROOT + sep)) throw new Error(`${f.to} is outside the repository (${ROOT})`)

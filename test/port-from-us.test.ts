@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path'
 const ROOT = resolve(__dirname, '..')
 
 // A throwaway "Us" repository with one committed file, and a manifest that ports it.
-function port(source: string, file: Record<string, unknown> = {}, over: Record<string, unknown> = {}) {
+function port(source: string, file: Record<string, unknown> = {}, { extraFiles = [], ...over }: Record<string, unknown> & { extraFiles?: Record<string, unknown>[] } = {}) {
   const us = mkdtempSync(join(tmpdir(), 'us-'))
   const git = (...a: string[]) => execFileSync('git', a, { cwd: us, encoding: 'utf8' }).trim()
   git('init', '-q')
@@ -26,7 +26,7 @@ function port(source: string, file: Record<string, unknown> = {}, over: Record<s
     renames: { NOTE_MAX: 'MESSAGE_MAX' },
     urls: [['`/api/us/snaps', '`${clientConfig().apiBase}']],
     configImport: "import { clientConfig } from './config.js'",
-    files: [{ from: 'src/a.tsx', to: join(out, 'a.tsx'), map: 'client', ...file }],
+    files: [{ from: 'src/a.tsx', to: join(out, 'a.tsx'), map: 'client', ...file }, ...extraFiles],
   }))
   execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), manifest], { env: { ...process.env, US_REPO: us, PORT_ROOT: out } })
   return readFileSync(join(out, 'a.tsx'), 'utf8')
@@ -148,6 +148,19 @@ describe('port-from-us', () => {
     expect(() => port('const a = 1', { to: '/tmp/escaped-from-repo.ts' })).toThrow(/outside/)
   })
 
+  it('leaves a file the manifest marks diverged untouched, so a re-port cannot undo work done since', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dv-'))
+    const kept = join(out, 'kept.tsx')
+    writeFileSync(kept, 'changed here since\n')
+    const ported = port('const a = 1\n', {}, { diverged: [kept], extraFiles: [{ from: 'src/a.tsx', to: kept, map: 'client' }] })
+    expect(ported).toBe('const a = 1\n')
+    expect(readFileSync(kept, 'utf8')).toBe('changed here since\n')
+  })
+
+  it('refuses a diverged entry that names no file in the manifest, so the list cannot go stale', () => {
+    expect(() => port('const a = 1\n', {}, { diverged: ['src/not-ported.ts'] })).toThrow(/diverged/)
+  })
+
   it('refuses a commit that is not a hex sha, before running git', () => {
     expect(() => port('const a = 1', {}, { commit: '--upload-pack=x' })).toThrow(/hex/)
   })
@@ -182,15 +195,26 @@ const haveSource = (name: string) => {
 describe.each(MANIFESTS)('the %s port', (name) => {
   it.skipIf(!haveSource(name))('reproduces the committed files byte for byte, so the scrub survives a re-port', () => {
     const out = mkdtempSync(join(tmpdir(), 'rp-'))
-    const manifest = JSON.parse(readFileSync(join(ROOT, `scripts/port/${name}.json`), 'utf8')) as { files: { to: string }[] }
+    const manifest = JSON.parse(readFileSync(join(ROOT, `scripts/port/${name}.json`), 'utf8')) as { files: { to: string }[]; diverged?: string[] }
     execFileSync('node', [join(ROOT, 'scripts/port-from-us.mjs'), join(ROOT, `scripts/port/${name}.json`)], {
       env: { ...process.env, PORT_ROOT: out }, stdio: 'pipe',
     })
-    for (const f of manifest.files) expect(readFileSync(join(out, f.to), 'utf8'), f.to).toBe(readFileSync(join(ROOT, f.to), 'utf8'))
+    // A diverged file was changed here on purpose; the port leaves it unwritten and it is not compared.
+    for (const f of manifest.files.filter((x) => !(manifest.diverged ?? []).includes(x.to))) {
+      expect(readFileSync(join(out, f.to), 'utf8'), f.to).toBe(readFileSync(join(ROOT, f.to), 'utf8'))
+    }
   })
 })
 
 describe('the port manifests', () => {
+  it('mark as diverged only files they port', () => {
+    const dir = join(ROOT, 'scripts/port')
+    for (const name of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      const m = JSON.parse(readFileSync(join(dir, name), 'utf8')) as { files: { to: string }[]; diverged?: string[] }
+      for (const d of m.diverged ?? []) expect(m.files.map((f) => f.to), `${name} ${d}`).toContain(d)
+    }
+  })
+
   it('carry no dated or quoted text in a literal replace rule, because a rule is committed as plainly as the file it fixes', () => {
     const dir = join(ROOT, 'scripts/port')
     for (const name of readdirSync(dir).filter((n) => n.endsWith('.json'))) {

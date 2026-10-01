@@ -339,5 +339,9 @@
       "map": "client",
       "renames": true
     }
+  ],
+  "diverged": [
+    "src/client/add-snap.tsx",
+    "src/client/add-snap.test.tsx"
   ]
 }
