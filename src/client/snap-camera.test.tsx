@@ -151,9 +151,40 @@ describe('SnapCamera', () => {
   it('offers the picker when there is no camera to open', async () => {
     const p = props()
     await act(async () => { render(<SnapCamera stream={Promise.reject(new Error('denied'))} {...p} />) })
-    await waitFor(() => expect(screen.getByText('No camera.')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("The camera didn't open.")).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Choose a photo instead' }))
     expect(p.onPickInstead).toHaveBeenCalled()
+  })
+
+  it('says why the camera failed, and Try again re-opens it through the same opener', async () => {
+    const p = props()
+    const denied = Object.assign(new Error('denied'), { name: 'NotAllowedError' })
+    vi.mocked(openStream).mockClear()
+    vi.mocked(openStream).mockRejectedValueOnce(denied).mockResolvedValueOnce(aStream())
+    await act(async () => { render(<SnapCamera stream={Promise.reject(denied)} {...p} />) })
+    await waitFor(() => expect(screen.getByText('Camera is blocked for this app.')).toBeInTheDocument())
+    expect(screen.getByText(/Settings → Apps → Safari → Camera/)).toBeInTheDocument()
+    expect(screen.queryByText('No camera.')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Choose a photo instead' })).toBeInTheDocument()
+
+    // The first retry fails again: still the same reason, no crash.
+    await press('Try again')
+    expect(openStream).toHaveBeenCalledTimes(1)
+    expect(openStream).toHaveBeenLastCalledWith('user')
+    await waitFor(() => expect(screen.getByText('Camera is blocked for this app.')).toBeInTheDocument())
+
+    // The second works: the failure view is gone and the shutter is back.
+    await press('Try again')
+    expect(openStream).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(screen.queryByText('Camera is blocked for this app.')).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Take the selfie' })).toBeInTheDocument()
+  })
+
+  it('shows the error name for a failure it does not recognize', async () => {
+    await act(async () => { render(<SnapCamera stream={Promise.reject(new DOMException('x', 'WeirdError'))} {...props()} />) })
+    await waitFor(() => expect(screen.getByText("The camera didn't open.")).toBeInTheDocument())
+    expect(screen.getByText('(WeirdError)')).toBeInTheDocument()
   })
 
   it('lets the camera go when it closes', async () => {

@@ -2,6 +2,10 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.2.1 (2026-10-02)
+
+- The camera screen now says why the camera did not open instead of a bare "No camera." and the reason was previously thrown away. Blocked permission, another app (such as a video call) holding the camera, no camera at all, and anything else each get their own plain-language title and fix, and an unrecognized failure shows the error's name in small text so a screenshot says what happened. A "Try again" button re-opens the camera; "Choose a photo instead" stays. A browser with no camera API at all now rejects as a missing camera. The other catches in the camera screen (taking the shot, reading a screenshot, saving) never led to this screen and are unchanged.
+
 ## 0.2.0 (2026-10-01)
 
 Options, all off by default. With none turned on, for every request 0.1.3's own client sends, every answer, stored record, call into the host and screen is what 0.1.3 produced (a golden recorded from 0.1.3 proves it). One request 0.1.3's client never sent is now refused: with the options off, a filing body carrying a `justUs` other than `false` or `null`, or non-null `tags` answers 400 instead of being filed with the field ignored, because ignoring it would show a private snap to everyone.

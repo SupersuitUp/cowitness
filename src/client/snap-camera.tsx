@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { cameraFailure, type CameraFailure } from './camera-failure.js'
 import { useHistoryLayer } from './history-layer.js'
 import { browserCamera, frameThumb, grabAndClose, openStream, playing, type Camera, type Frame } from './dual-camera.js'
 import { quarterTurnsFrom, readTilt, screenAngle, turnFrame } from './upright.js'
@@ -51,6 +52,8 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
   const [preview, setPreview] = useState<string | null>(null)
   const [screened, setScreened] = useState(false)
   const [trouble, setTrouble] = useState('')
+  // Why the camera would not open, kept so the screen can say it instead of a bare "No camera".
+  const [failure, setFailure] = useState<CameraFailure | null>(null)
   const picker = useRef<HTMLInputElement>(null)
 
   const release = useCallback(() => {
@@ -70,7 +73,11 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
       if (!wanted || !video.current) { ms.getTracks().forEach((t) => t.stop()); return }
       cam.current = playing(ms, video.current)
       setBusy(false)
-    }).catch(() => { if (wanted) setStage('nocamera') })
+    }).catch((err: unknown) => {
+      if (!wanted) return
+      setFailure(cameraFailure(err))
+      setStage('nocamera')
+    })
     return () => { wanted = false }
   }, [])
 
@@ -152,6 +159,7 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
     setPreview(null)
     setThumb(null)
     setScreened(false)
+    setFailure(null)
     setStage('selfie')
     setBusy(true)
     release()
@@ -202,15 +210,24 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
           />
         )}
         {stage === 'nocamera' && (
-          <div className="absolute inset-0 flex items-center justify-center text-[17px]">No camera.</div>
+          <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+            <p className="text-[19px] font-medium">{failure?.title ?? cameraFailure(undefined).title}</p>
+            <p className="text-[15px] opacity-80">{failure?.help ?? cameraFailure(undefined).help}</p>
+            {failure?.detail && <p className="text-[12px] opacity-50">{failure.detail}</p>}
+          </div>
         )}
       </div>
 
       <div className="flex h-32 shrink-0 flex-col items-center justify-center gap-3 px-6">
         {stage === 'nocamera' ? (
-          <button type="button" onClick={onPickInstead} className="h-12 rounded-full bg-white px-6 text-[17px] font-medium text-black">
-            Choose a photo instead
-          </button>
+          <>
+            <button type="button" onClick={restart} className="h-12 rounded-full bg-white px-6 text-[17px] font-medium text-black">
+              Try again
+            </button>
+            <button type="button" onClick={onPickInstead} className="h-10 rounded-full border border-white/40 px-6 text-[15px]">
+              Choose a photo instead
+            </button>
+          </>
         ) : preview ? (
           /* Two rows rather than three abreast: on a phone the row wrapped every label onto two
              lines, and the optional step is the one that most needs to be read. */

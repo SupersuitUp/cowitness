@@ -57,7 +57,7 @@ export function cameraConstraints(facing: Facing): MediaStreamConstraints {
 
 /** Open a camera's tracks. Called inside the tap, because a phone grants a camera only there. */
 export function openStream(facing: Facing): Promise<MediaStream> {
-  if (!navigator.mediaDevices?.getUserMedia) return Promise.reject(new Error('no camera'))
+  if (!navigator.mediaDevices?.getUserMedia) return Promise.reject(Object.assign(new Error('no camera'), { name: 'NotFoundError' }))
   return navigator.mediaDevices.getUserMedia(cameraConstraints(facing))
 }
 

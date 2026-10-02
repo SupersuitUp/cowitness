@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { frameThumb, grabAndClose, type Camera, type CameraIo, type Frame } from './dual-camera.js'
+import { frameThumb, grabAndClose, openStream, type Camera, type CameraIo, type Frame } from './dual-camera.js'
 
 const frame = (): Frame => ({ image: {} as CanvasImageSource, width: 4, height: 3, release: vi.fn() })
 const camera = (name: string) => ({ name }) as unknown as Camera
@@ -62,5 +62,18 @@ describe('frameThumb', () => {
   it('never enlarges a frame that is already small', () => {
     frameThumb({ image: 'f' as unknown as CanvasImageSource, width: 100, height: 200, release: vi.fn() }, 320)
     expect(sized[0]).toEqual({ width: 100, height: 200 })
+  })
+})
+
+describe('openStream', () => {
+  it('rejects as a missing camera, by name, when the browser has no mediaDevices', async () => {
+    const saved = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
+    Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true })
+    try {
+      await expect(openStream('user')).rejects.toMatchObject({ name: 'NotFoundError' })
+    } finally {
+      if (saved) Object.defineProperty(navigator, 'mediaDevices', saved)
+      else delete (navigator as unknown as Record<string, unknown>).mediaDevices
+    }
   })
 })

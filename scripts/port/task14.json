@@ -349,6 +349,8 @@
     "src/client/snap-detail.test.tsx",
     "src/client/snaps-archive.tsx",
     "src/client/snaps-archive.test.tsx",
+    "src/client/snap-camera.tsx",
+    "src/client/snap-camera.test.tsx",
     "src/client/streak-strip.tsx",
     "src/client/streak-strip.test.tsx",
     "src/client/witness-session.tsx",
