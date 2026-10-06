@@ -20,7 +20,8 @@ import { indexedDbVault, memoryVault } from './recording-vault.js'
 import { ACCENT, MUTED, ON_INK, SERIF } from './theme.js'
 
 // Inside Cowitness: Witness (N) at the top when anything is waiting, then Add a snap, then what
-// is still open. Witnessed snaps live on their own shelf, one link away. The session opens over this page as a history layer, and the tap on Witness is the
+// is still open. Witnessed snaps live on their own shelf, one link away (with the `home: 'today'`
+// option: the last 24 hours, and everything older on the shelf, named Earlier). The session opens over this page as a history layer, and the tap on Witness is the
 // user gesture it starts from: the microphone is asked for inside `witness`, in that same tap,
 // because a phone only grants it there.
 // `can` is what the app says this person may do: someone who only witnesses is offered no share
@@ -76,6 +77,10 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
     setMic(null)
     router.refresh()
   }
+  // With the home as the last day the shelf is everything older, so it is named for time, not for witnessing.
+  const today = clientFeatures().home === 'today'
+  const shelfName = today ? 'Earlier' : 'Witnessed'
+  const empty = today ? 'Nothing shared in the last day.' : witnessed > 0 ? 'All caught up.' : undefined
   return (
     <>
       <div className="mb-4"><StreakStrip rows={streak} me={me} names={names} shares={can.share} /></div>
@@ -96,11 +101,11 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
       {dropped && <p role="status" className="mt-2 px-4 text-center text-sm" style={{ color: MUTED }}>A voice note could not be sent and was let go.</p>}
       {can.share && <div className="mt-4"><AddSnap tagChoices={tagChoices} languages={languages} shares={can.share} /></div>}
       <div className="mt-6">
-        <SnapsArchive rows={rows} me={me} names={names} empty={witnessed > 0 ? 'All caught up.' : undefined} />
+        <SnapsArchive rows={rows} me={me} names={names} empty={empty} />
       </div>
       {witnessed > 0 && (
         <p className="text-center">
-          <Link href={`${clientConfig().pageBase}/witnessed`} className="inline-flex h-11 items-center px-3 text-sm" style={{ color: MUTED }}>Witnessed ({witnessed}) ›</Link>
+          <Link href={`${clientConfig().pageBase}/witnessed`} className="inline-flex h-11 items-center px-3 text-sm" style={{ color: MUTED }}>{shelfName} ({witnessed}) ›</Link>
         </p>
       )}
       {open && (

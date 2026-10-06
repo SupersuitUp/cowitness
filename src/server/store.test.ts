@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RuleError } from '../errors.js'
 import { createCowitnessStore } from './store.js'
 import { fakeHost } from '../../test/support/fake-host.js'
@@ -39,6 +39,24 @@ describe('filing a snap', () => {
     const { store } = setup()
     const s = await store.finalizeSnapVideo('ben', 'v1', { meta: { durationSec: 3, width: 720, height: 1280 } })
     expect(s).toMatchObject({ kind: 'video', width: 720, height: 1280, by: 'ben' })
+  })
+})
+
+describe('reading with the home as the last day', () => {
+  afterEach(() => { vi.useRealTimers() })
+  it('the home shows the last 24 hours whoever witnessed them, and the shelf holds everything older, deleted never', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-30T20:00:00.000Z'))
+    const { store } = setup({ features: { home: 'today' } })
+    const home = await store.listCowitness('ana')
+    expect(home.rows.map((r) => r.id).sort()).toEqual(['x1', 'x2'])
+    expect(home.witnessed).toBe(0)
+    vi.setSystemTime(new Date('2026-10-01T08:30:00.000Z'))
+    const later = await store.listCowitness('ana')
+    expect(later.rows.map((r) => r.id)).toEqual(['x1'])
+    expect(later.witnessed).toBe(1)
+    expect((await store.listWitnessed('ana')).map((r) => r.id)).toEqual(['x2'])
+    expect(later.streak.map((r) => r.id).sort()).toEqual(['x1', 'x2'])
   })
 })
 

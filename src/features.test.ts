@@ -5,9 +5,13 @@ describe('resolveFeatures', () => {
   it('turns nothing on by default: each other, the double camera, the per-person streak', () => {
     expect(resolveFeatures()).toEqual({
       witnessing: 'each-other', voiceSnaps: false, justUs: false, tags: false, doubleCamera: true, prompts: false,
-      streak: { kind: 'each-and-together' },
+      streak: { kind: 'each-and-together' }, home: 'open',
     })
     expect(resolveFeatures({})).toEqual(DEFAULT_FEATURES)
+  })
+  it('the home is open snaps by default, or the last day when the app asks, and nothing else', () => {
+    expect(resolveFeatures({ home: 'today' }).home).toBe('today')
+    expect(() => resolveFeatures({ home: 'week' as never })).toThrow(/home must be open or today/)
   })
   it('keeps what a host turned on and ignores what it left undefined', () => {
     expect(resolveFeatures({ voiceSnaps: true, justUs: undefined })).toMatchObject({ voiceSnaps: true, justUs: false })

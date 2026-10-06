@@ -1,6 +1,7 @@
 // Which of Cowitness's options an app turned on. Every option is off unless the host says
 // otherwise, and the defaults are exactly how the package behaved before options existed.
 export type Witnessing = 'each-other' | 'audience'
+export type HomeWindow = 'open' | 'today'
 export type HouseholdStreakRule = { kind: 'household'; timeZone: string; since: string; freeSkipsPerWeek: 0 | 1 }
 export type StreakRule = { kind: 'each-and-together' } | HouseholdStreakRule
 
@@ -19,11 +20,13 @@ export interface CowitnessFeatures {
   prompts: boolean
   /** each-and-together: a streak per person and one together, in the phone's own day. household: one count for everyone who shares, in one time zone, from a start date. */
   streak: StreakRule
+  /** open: the home holds what nobody has witnessed yet, and the shelf what has been. today: the home holds the last 24 hours, witnessed or not, and the shelf everything older. Nothing is ever deleted either way. */
+  home: HomeWindow
 }
 
 export const DEFAULT_FEATURES: Readonly<CowitnessFeatures> = Object.freeze({
   witnessing: 'each-other', voiceSnaps: false, justUs: false, tags: false, doubleCamera: true, prompts: false,
-  streak: Object.freeze({ kind: 'each-and-together' }) as StreakRule,
+  streak: Object.freeze({ kind: 'each-and-together' }) as StreakRule, home: 'open',
 })
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/
@@ -42,6 +45,7 @@ export function resolveFeatures(f: Partial<CowitnessFeatures> = {}): CowitnessFe
   const set = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)) as Partial<CowitnessFeatures>
   const out: CowitnessFeatures = { ...DEFAULT_FEATURES, ...set }
   if (out.witnessing !== 'each-other' && out.witnessing !== 'audience') throw new Error(`cowitness: witnessing must be each-other or audience, not ${String(out.witnessing)}`)
+  if (out.home !== 'open' && out.home !== 'today') throw new Error(`cowitness: home must be open or today, not ${String(out.home)}`)
   if (out.streak.kind === 'household') {
     if (!knownZone(out.streak.timeZone)) throw new Error(`cowitness: the household streak's time zone ${out.streak.timeZone} is not one this runtime knows`)
     if (!DAY_KEY.test(out.streak.since)) throw new Error('cowitness: the household streak needs since as YYYY-MM-DD')

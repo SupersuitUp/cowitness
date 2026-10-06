@@ -161,6 +161,7 @@ so is an option turned on without the host part it needs.
 | `prompts: true` | Capture reminders at each person's own times, one person per reminder, "not today" for a day. | `prompts`: `collection`, `timeZone`, `people()`, `save()`, `nudge()` | off | none on a snap; one claim per reminder sent in `prompts.collection` |
 | `streak: { kind: 'household', ... }` | One streak for everyone who shares, in one time zone, from a start date, with one free skip a week when `freeSkipsPerWeek` is 1. A person who only witnesses is shown no streak. | none | `{ kind: 'each-and-together' }` | none |
 | `doubleCamera: false` | The share sheet stops offering the double camera. | none | on | none |
+| `home: 'today'` | The home holds the last 24 hours, witnessed or not, and the shelf (`listWitnessed`, the link reads "Earlier") holds everything older. Nothing is deleted; the streak still counts every snap. | none | `'open'`: the home holds what nobody has witnessed yet | none |
 
 A record without the new fields reads exactly as before. A snap filed "just us" stays private
 whatever the options say later: with no circle to say who shares, it is its author's alone.

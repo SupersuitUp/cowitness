@@ -2,6 +2,10 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.2.2 (2026-10-05)
+
+- New option `home: 'today'`, off by default. The Cowitness home shows the last 24 hours (a rolling window, witnessed or not), and the shelf behind the link, now named "Earlier", holds everything older. Nothing is deleted and the streak still counts every snap, so the home feels new each day and the record stays whole. With the option off, every answer and screen is what 0.2.1 produced. New rules `todayOf` and `earlierOf`.
+
 ## 0.2.1 (2026-10-02)
 
 - The camera screen now says why the camera did not open instead of a bare "No camera." and the reason was previously thrown away. Blocked permission, another app (such as a video call) holding the camera, no camera at all, and anything else each get their own plain-language title and fix, and an unrecognized failure shows the error's name in small text so a screenshot says what happened. A "Try again" button re-opens the camera; "Choose a photo instead" stays. A browser with no camera API at all now rejects as a missing camera. The other catches in the camera screen (taking the shot, reading a screenshot, saving) never led to this screen and are unchanged.

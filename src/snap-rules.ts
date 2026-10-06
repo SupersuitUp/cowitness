@@ -126,6 +126,22 @@ export function witnessedOf<T extends Snap>(snaps: T[], m: Member, ctx?: Circle)
   return archiveOf(snaps, m, ctx).filter((s) => seenBy(s, m, ctx))
 }
 
+// With the home as the last day: the last 24 hours on the home, witnessed or not, and everything
+// older on the shelf. A rolling window, not a calendar day, so nothing leaves the home at midnight
+// a minute after it was shared. The shelf keeps it; nothing here deletes anything.
+export const HOME_WINDOW_MS = 24 * 60 * 60 * 1000
+const sinceOf = (now: Date) => new Date(now.getTime() - HOME_WINDOW_MS).toISOString()
+
+export function todayOf<T extends Snap>(snaps: T[], m: Member, now: Date, ctx?: Circle): T[] {
+  const since = sinceOf(now)
+  return archiveOf(snaps, m, ctx).filter((s) => s.createdAt > since)
+}
+
+export function earlierOf<T extends Snap>(snaps: T[], m: Member, now: Date, ctx?: Circle): T[] {
+  const since = sinceOf(now)
+  return archiveOf(snaps, m, ctx).filter((s) => s.createdAt <= since)
+}
+
 // The one image a grid tile shows: the thumbnail, or a video's poster. A tile never needs the
 // display size or the video itself, so nothing else is signed for it.
 export function thumbPathOf(s: Snap): string | null {

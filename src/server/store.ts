@@ -4,7 +4,7 @@ import { RuleError, isRuleError } from '../errors.js'
 import { CLIP_CONTENT_TYPES, CLIP_MAX_BYTES, validateClip } from '../shared-rules.js'
 import {
   addVoiceReaction, applySnapPatch, archiveOf, assertCanShare, canAutoTranscribe, canRetranscribe, canSeeSnap, coverOf, cowitnessTile,
-  failReactionTranscript, markTranscribing, newSnap, openOf, queueOf, reactionAudioPath, reactionTicket,
+  failReactionTranscript, markTranscribing, newSnap, openOf, todayOf, earlierOf, queueOf, reactionAudioPath, reactionTicket,
   setReactionTranscript, thumbPathOf, validateCaption, validateCommentId, validateReactionClip, witnessedOf, type ReactionTicket,
 } from '../snap-rules.js'
 import { snapRow, type SnapRow } from '../format.js'
@@ -138,15 +138,20 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   async function listCowitness(m: M): Promise<{ rows: SnapRow[]; streak: SnapRow[]; witnessed: number; queue: SnapView<M>[] }> {
     const ctx = await circle()
     const all = await readSnaps()
-    const [rows, queue] = await Promise.all([Promise.all(openOf(all, m, ctx).map(tileRow)), Promise.all(queueOf(all, m, ctx).map(withUrls))])
+    const now = new Date()
+    const home = features.home === 'today' ? todayOf(all, m, now, ctx) : openOf(all, m, ctx)
+    const shelf = features.home === 'today' ? earlierOf(all, m, now, ctx) : witnessedOf(all, m, ctx)
+    const [rows, queue] = await Promise.all([Promise.all(home.map(tileRow)), Promise.all(queueOf(all, m, ctx).map(withUrls))])
     // A person who only witnesses has no streak, so no rows for one are sent at all.
     const streak = ctx?.witnessing === 'audience' && !ctx.sharers.has(m) ? [] : archiveOf(all, m, ctx).map((s) => snapRow(s))
-    return { rows, queue, streak, witnessed: witnessedOf(all, m, ctx).length }
+    return { rows, queue, streak, witnessed: shelf.length }
   }
 
   async function listWitnessed(m: M): Promise<SnapRow[]> {
     const ctx = await circle()
-    return Promise.all(witnessedOf(await readSnaps(), m, ctx).map(tileRow))
+    const all = await readSnaps()
+    // The shelf is whatever the home is not: witnessed snaps, or with the home as the last day, older ones.
+    return Promise.all((features.home === 'today' ? earlierOf(all, m, new Date(), ctx) : witnessedOf(all, m, ctx)).map(tileRow))
   }
 
   async function getSnapView(m: M, id: string): Promise<SnapView<M> | null> {

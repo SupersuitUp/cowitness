@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  SNAP_CAPTION_MAX, validateCaption, canSeeSnap, newSnap, applySnapPatch, archiveOf, snapHasNew, cowitnessTile, coverOf, queueOf, openOf, witnessedOf, thumbPathOf,
+  SNAP_CAPTION_MAX, validateCaption, canSeeSnap, newSnap, applySnapPatch, archiveOf, snapHasNew, cowitnessTile, coverOf, queueOf, openOf, witnessedOf, todayOf, earlierOf, thumbPathOf,
   REACTION_MAX_SEC, reactionAudioPath, validateReactionClip, validateCommentId, reactionTicket, addVoiceReaction,
   markTranscribing, setReactionTranscript, failReactionTranscript, canAutoTranscribe, canRetranscribe,
 } from './snap-rules.js'
@@ -291,5 +291,23 @@ describe('a reaction\'s words', () => {
     expect(canRetranscribe({ ...rec, status: 'transcribing', startedAt: '2026-09-27T20:00:00.000Z' }, oldComment, now)).toBe(false)
     // Old comment, and the attempt itself is more than 5 minutes old: recoverable.
     expect(canRetranscribe({ ...rec, status: 'transcribing', startedAt: '2026-09-27T19:50:00.000Z' }, oldComment, now)).toBe(true)
+  })
+})
+
+describe('the home as the last day, and the shelf as everything before it', () => {
+  const now = new Date('2026-09-28T12:00:00.000Z')
+  const fresh = snap({ id: 'fresh', by: 'ben', createdAt: '2026-09-28T11:00:00.000Z', witnessedAt: NOW })
+  const edge = snap({ id: 'edge', by: 'ana', createdAt: '2026-09-27T12:00:00.001Z' })
+  const old = snap({ id: 'old', by: 'ben', createdAt: '2026-09-27T12:00:00.000Z' })
+  const hid = snap({ id: 'hid', by: 'ben', createdAt: '2026-09-28T10:00:00.000Z', hiddenAt: NOW })
+
+  it('the home keeps the last 24 hours, witnessed or not, newest first', () => {
+    expect(todayOf([old, edge, fresh, hid], 'ana', now).map((s) => s.id)).toEqual(['fresh', 'edge'])
+  })
+  it('anything 24 hours old or older is on the shelf, still kept, newest first', () => {
+    expect(earlierOf([old, edge, fresh, hid], 'ana', now).map((s) => s.id)).toEqual(['old'])
+  })
+  it('a hidden snap stays with whoever hid it, wherever the clock puts it', () => {
+    expect(todayOf([hid], 'ben', now).map((s) => s.id)).toEqual(['hid'])
   })
 })

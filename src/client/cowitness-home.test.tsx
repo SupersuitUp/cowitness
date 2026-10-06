@@ -113,6 +113,13 @@ describe('CowitnessHome with options', () => {
     configure({ ...before, features })
     try { await fn() } finally { configure(before) }
   }
+  it('with the home as the last day, the shelf is Earlier and an empty day says so', () => withFeatures({ home: 'today' }, () => {
+    const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={3} queue={[]} me="ana" names={NAMES} />)
+    expect(screen.getByRole('link', { name: 'Earlier (3) ›' })).toHaveAttribute('href', '/cowitness/witnessed')
+    expect(screen.getByText('Nothing shared in the last day.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Witnessed/ })).toBeNull()
+    unmount()
+  }))
   it('tells the share sheet whether this person shares, from what the app says they may do', () => {
     const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="ana" names={NAMES} can={{ share: true, witness: false }} />)
     expect(screen.getByRole('button', { name: 'Add a snap' })).toHaveAttribute('data-shares', 'true')
