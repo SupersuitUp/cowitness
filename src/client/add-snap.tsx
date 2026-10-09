@@ -166,7 +166,7 @@ export function AddSnap({ tagChoices = [], languages, shares = false }: { tagCho
           {voice && languages?.length ? (
             <select
               aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}
-              className="mx-auto mt-3 block h-11 rounded-2xl px-3 text-sm" style={{ color: INK, border: `1px solid ${HAIRLINE}` }}
+              className="mx-auto mt-3 block h-11 rounded-2xl px-3 text-base" style={{ color: INK, border: `1px solid ${HAIRLINE}` }}
             >
               <option value="auto">Any language</option>
               {languages.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -196,7 +196,7 @@ export function AddSnap({ tagChoices = [], languages, shares = false }: { tagCho
               Tag
               <select
                 aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}
-                className="mt-1 h-11 w-full rounded-2xl px-3" style={{ border: `1px solid ${HAIRLINE}` }}
+                className="mt-1 h-11 w-full rounded-2xl px-3 text-base" style={{ border: `1px solid ${HAIRLINE}` }}
               >
                 <option value="">None</option>
                 {tagChoices.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}

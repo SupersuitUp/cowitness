@@ -30,7 +30,7 @@ export function CaptureReminders({ initial, children }: { initial: PromptSetting
       {editing ? (
         <div className="mt-3 flex gap-2">
           <label className="sr-only" htmlFor="reminder-times">Times</label>
-          <input id="reminder-times" value={draft} onChange={(e) => setDraft(e.target.value)} className="h-11 flex-1 rounded-2xl px-3 text-sm" style={{ border: `1px solid ${HAIRLINE}` }} />
+          <input id="reminder-times" value={draft} onChange={(e) => setDraft(e.target.value)} className="h-11 flex-1 rounded-2xl px-3 text-base" style={{ border: `1px solid ${HAIRLINE}` }} />
           <button type="button" className="h-11 px-3 text-sm" style={{ color: INK }} onClick={async () => { if (await save({ times: draft.split(',').map((x) => x.trim()).filter(Boolean) })) setEditing(false) }}>Save</button>
         </div>
       ) : (

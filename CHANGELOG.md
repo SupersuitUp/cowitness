@@ -2,6 +2,10 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.2.3 (2026-10-09)
+
+- The language picker, the tag picker and the reminder times field were set at 14px, so iOS Safari zoomed the page when one was focused. They are now 16px (`text-base`) with the same height and padding. A test reads every input, textarea and select in the screens and fails if one is under 16px.
+
 ## 0.2.2 (2026-10-05)
 
 - New option `home: 'today'`, off by default. The Cowitness home shows the last 24 hours (a rolling window, witnessed or not), and the shelf behind the link, now named "Earlier", holds everything older. Nothing is deleted and the streak still counts every snap, so the home feels new each day and the record stays whole. With the option off, every answer and screen is what 0.2.1 produced. New rules `todayOf` and `earlierOf`.
