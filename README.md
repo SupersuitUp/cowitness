@@ -306,6 +306,16 @@ it is.
 - `sendReaction(snapId, blob, durationSec, commentId)` files a spoken reply under a snap, for an
   app whose own conversation (`renderThread`) records spoken replies.
 
+### Why an iPhone asks for permission every time
+
+In an app added to the home screen, iOS does not remember camera, microphone or motion
+permission between launches, and Safari's per-site "Allow" setting does not reach it. So each
+launch asks again: motion and camera on the first share (motion is how a landscape snap taken
+with rotation lock on comes out landscape), and the microphone on the Witness tap (it records
+spoken reactions hands-free). This is the platform, not a defect here. Each prompt was kept on
+purpose (decided 2026-10-10): dropping motion turns those landscape snaps sideways, and asking for
+the microphone only when someone chooses to speak would end hands-free reactions.
+
 ## Releasing
 
 A release is a version tag. Bump `version` (`npm version <x.y.z> --no-git-tag-version`), add the
