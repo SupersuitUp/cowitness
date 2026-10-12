@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { Comment, MemberNames } from '../types.js'
+import type { Comment, MemberNames, EmojiReaction } from '../types.js'
 import { resolveFeatures, type CowitnessFeatures } from '../features.js'
 
 // What a snap's conversation slot is given. The app draws the conversation itself, so a snap's
@@ -9,6 +9,9 @@ export interface ThreadSlotProps {
   me: string
   names: MemberNames
   comments: Comment[] | undefined
+  reactions?: EmojiReaction[]
+  onReact?(emoji: string, value: boolean): void
+  onDiscard?(commentId: string): void
   /** The server's conversation after a send landed. */
   onSent(next: Comment[]): void
   /** Where a message's recording plays from, or null. */

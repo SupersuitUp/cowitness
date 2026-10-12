@@ -81,6 +81,8 @@ export interface CowitnessHost<M extends string> {
     witnessed(m: M, s: Snap<M>, firstWords: string): void
     message(m: M, s: Snap<M>, c: Comment<M>): void
     heart(m: M, s: Snap<M>, c: Comment<M>): void
+    /** Optional: a fresh emoji reaction. Removals and retries are quiet. */
+    reacted?(m: M, s: Snap<M>, emoji: string): void
     /** Optional: a spoken reaction was filed (its words arrive later). Without it, a spoken reaction is announced as nothing. */
     spoken?(m: M, s: Snap<M>, c: Comment<M>): void
     /** Optional: a snap's tags were set. `ids` is the full list now on the snap. */
@@ -109,6 +111,8 @@ export interface CowitnessHost<M extends string> {
     /** The languages a speaker may name; anything else is 'auto'. */
     languages: readonly string[]
     transcribe(audio: Buffer, contentType: string, opts: { language: string; speaker: M }): Promise<string>
+    /** Called after committed words/failure, for search reindexing. A failed hook never loses words. */
+    settled?(snap: Snap<M>): void | Promise<void>
   }
   /** Which options are on. Absent: none, which is how the package behaved before options existed. */
   features?: Partial<CowitnessFeatures>

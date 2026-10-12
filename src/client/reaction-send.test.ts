@@ -36,6 +36,17 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('sending a reaction', () => {
+  it('a scoped retry sends only the same person’s recordings, leaving legacy and other-person audio held', async () => {
+    const store = memoryVault()
+    for (const [id, member] of [[REC_A, 'ana'], [REC_B, 'ben'], ['r-legacy00', undefined]] as const) {
+      await beginRecording(store, { id, noteId: reactionKey('s1', member), mimeType: 'audio/mp4' })
+      await keepChunk(store, id, new Blob(['voice']), 4); await endRecording(store, id, 4)
+    }
+    const send = vi.fn(async () => [])
+    expect(await sendHeld(store, send, 'ana')).toBe(1)
+    expect(send).toHaveBeenCalledWith('s1', expect.any(Blob), 4, REC_A, 'ana')
+    expect((await store.all()).map((r) => r.id).sort()).toEqual([REC_B, 'r-legacy00'].sort())
+  })
   it('asks for a ticket, puts the bytes in storage, then files them under the snap', async () => {
     const comments = await sendReaction('s1', new Blob(['aac'], { type: 'audio/mp4' }), 12, COMMENT_A)
     expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([

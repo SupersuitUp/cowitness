@@ -3,7 +3,7 @@ import { clientConfig } from './config.js'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Member, MemberNames } from '../types.js'
-import type { SnapView } from '../types.js'
+import type { SnapView, EmojiReaction } from '../types.js'
 import { MESSAGE_MAX } from '../shared-rules.js'
 import { REACTION_MAX_SEC } from '../snap-rules.js'
 import { useHistoryLayer } from './history-layer.js'
@@ -20,11 +20,13 @@ import {
 } from './recording-vault.js'
 import { ACCENT, ACCENT_SOFT, SERIF } from './theme.js'
 import { VoiceMedia } from './voice-media.js'
+import { EmojiReactions } from './discussion-controls.js'
 
 interface Props {
   queue: SnapView[]; me: Member; names: MemberNames; onClose(): void
   /** The session's one microphone, asked for in the Witness tap. Absent: typing only. */
   mic?: Promise<MediaStream> | null
+  onRequestVoice?(): void
   /** How the level is read off the stream; the analyser by default, a fake in tests. */
   listen?(stream: MediaStream): Listener | null
 }
@@ -48,7 +50,7 @@ const STOP_GIVE_UP_MS = 3000
 // With a microphone, each snap gets its own recording on the session's one stream, kept on the
 // phone chunk by chunk as it is made. Next sends it in the background when something was said
 // and lets it go when nothing was; the witness itself never waits on the upload.
-export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props) {
+export function WitnessSession({ queue, me, names, onClose, mic, listen, onRequestVoice }: Props) {
   // The queue as it was when the session opened. A router.refresh() underneath would drop the
   // snaps just witnessed and shift every index, so the session walks its own copy.
   const [items] = useState(() => queue)
@@ -56,6 +58,11 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
   const [typed, setTyped] = useState('')
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [reactions, setReactions] = useState<Record<string, EmojiReaction[]>>(() => Object.fromEntries(queue.map((s) => [s.id, s.reactions ?? []])))
+  const [reacting, setReacting] = useState(false)
+  const reactingNow = useRef(false)
+  const reactedNow = useRef(false)
+  const [reactionError, setReactionError] = useState(false)
   const [micState, setMicState] = useState<Mic>(mic ? 'waiting' : 'none')
   const [mode, setMode] = useState<'voice' | 'typing'>('voice')
   const [clock, setClock] = useState({ sec: 0, level: 0, live: false, capped: false })
@@ -114,12 +121,13 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
   // The phone's own store, and anything an earlier session left on it.
   useEffect(() => {
     vault.current = indexedDbVault() ?? memoryVault()
-    void sendHeld(vault.current).catch(() => {})
+    void sendHeld(vault.current, undefined, me).catch(() => {})
   }, [])
 
   // The one stream for the whole session.
   useEffect(() => {
     if (!mic) return
+    setMicState('waiting')
     let live = true
     mic.then((s) => {
       if (!live) return
@@ -188,7 +196,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
     pending.current = null
     setClock({ sec: 0, level: 0, live: true, capped: false })
     // The vault is opened BEFORE the first chunk, so nothing said is ever only in memory.
-    await beginRecording(vault.current, { id: t.held, noteId: reactionKey(snapId), mimeType: t.type }).catch(() => {})
+    await beginRecording(vault.current, { id: t.held, noteId: reactionKey(snapId, me), mimeType: t.type }).catch(() => {})
     // Cut while the store was opening (Next, Type instead, leaving): nobody owns this any more.
     if (take.current !== t) { void forget(vault.current, t.held); return }
     rec.ondataavailable = (e) => {
@@ -197,7 +205,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
       void keepChunk(vault.current, t.held, e.data, (Date.now() - t.startedAt) / 1000).catch(() => {})
     }
     try { rec.start(1000) } catch { take.current = null; void forget(vault.current, t.held); micOff() }
-  }, [micOff])
+  }, [micOff, me])
 
   // A fresh recording whenever a snap appears and the mic is listening.
   useEffect(() => {
@@ -230,7 +238,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
     if (!f) return
     if (!sendsRecording(f.keep, typed) || f.blob.size === 0) { void forget(vault.current, f.held); return }
     setSending((n) => n + 1)
-    void sendReaction(f.snapId, f.blob, f.durationSec, f.held)
+    void sendReaction(f.snapId, f.blob, f.durationSec, f.held, me)
       .then(() => forget(vault.current, f.held))
       .catch(() => { /* Still in the vault; sendHeld sends it next time. */ })
       .finally(() => setSending((n) => n - 1))
@@ -245,6 +253,21 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
   const witness = (snapId: string, words: string) => fetch(`${clientConfig().apiBase}/${snapId}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(witnessPatch(words)),
   }).catch(() => null)
+
+  const react = async (emoji: string, value: boolean) => {
+    if (!snap || reactingNow.current) return
+    reactingNow.current = true; setReacting(true); setReactionError(false)
+    try {
+      const res = await fetch(`${clientConfig().apiBase}/${snap.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'reaction', emoji, value }),
+      })
+      if (!res.ok) throw new Error('reaction refused')
+      const data = await res.json() as SnapView
+      setReactions((r) => ({ ...r, [snap.id]: data.reactions ?? [] }))
+      reactedNow.current = true
+    } catch { setReactionError(true) }
+    finally { reactingNow.current = false; setReacting(false) }
+  }
 
   // The snap on screen and whether Next is already saving it, for the ways out that run outside
   // a render (the back gesture, the page going away).
@@ -265,7 +288,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
     const t = take.current
     const p = pending.current
     const said = t !== null && worthKeeping(Date.now() - t.startedAt, speech.current)
-    if (!p && !said && !words.trim()) {
+    if (!p && !said && !words.trim() && !reactedNow.current) {
       take.current = null
       if (t) {
         t.rec.ondataavailable = null; t.rec.onstop = null; t.rec.onerror = null
@@ -283,7 +306,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
   useEffect(() => () => saveOnLeaveRef.current(), [])
 
   const next = async () => {
-    if (!snap || saving) return
+    if (!snap || saving || reactingNow.current) return
     setSaving(true)
     setFailed(false)
     nexting.current = true
@@ -302,6 +325,8 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
       return
     }
     setTyped('')
+    reactedNow.current = false
+    setReactionError(false)
     setMode('voice')
     setClock({ sec: 0, level: 0, live: false, capped: false })
     setSession(advance)
@@ -340,7 +365,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
             }}
           >
             {snap.kind === 'voice'
-              ? <div key={snap.id} className="w-full"><VoiceMedia snap={snap} me={me} /></div>
+              ? <div key={snap.id} className="w-full"><VoiceMedia snap={snap} me={me} tone="dark" /></div>
               : snap.kind === 'video'
               ? <WitnessVideo key={snap.id} snap={snap} label={`Snap from ${names[snap.by]}`} />
               // eslint-disable-next-line @next/next/no-img-element -- signed, expiring storage URL
@@ -349,6 +374,9 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
           <div className="px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3">
             {snap.caption && <p className="mb-1 whitespace-pre-wrap text-[17px] leading-snug" style={{ fontFamily: SERIF }}>{snap.caption}</p>}
             <SnapTime at={snap.takenAt} />
+            <div className="mt-3"><EmojiReactions me={me} names={names} marks={reactions[snap.id] ?? []} busy={reacting || saving}
+              accent="#ffffff" hairline="#ffffff40" onToggle={(emoji, value) => { void react(emoji, value) }} /></div>
+            {reactionError && <p role="alert" className="mt-1 text-sm" style={{ color: ACCENT_SOFT }}>Reaction not saved. Try again.</p>}
 
             {listening && (
               <div className="mt-3 flex items-center gap-3">
@@ -378,9 +406,10 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen }: Props
               </>
             )}
             <div className="mt-3 flex items-center justify-between gap-3">
+              {(micState === 'none' || micState === 'off') && onRequestVoice && <button type="button" className="h-12 rounded-full border border-white/40 px-5 text-sm" onClick={() => { setMode('voice'); onRequestVoice() }}>Add voice</button>}
               {listening && <button type="button" onClick={typeInstead} className="h-12 rounded-full border border-white/40 px-5 text-sm">Type instead</button>}
               <span aria-live="polite" className="text-sm" style={{ color: ACCENT_SOFT }}>{failed ? 'Not saved. Try again.' : ''}</span>
-              <button type="button" onClick={() => { void next() }} disabled={saving} className="h-12 rounded-full bg-white px-8 text-[17px] font-medium text-black disabled:opacity-50">
+              <button type="button" onClick={() => { void next() }} disabled={saving || reacting} className="h-12 rounded-full bg-white px-8 text-[17px] font-medium text-black disabled:opacity-50">
                 {last ? 'Done' : 'Next'}
               </button>
             </div>

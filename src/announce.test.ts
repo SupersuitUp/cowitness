@@ -32,3 +32,13 @@ describe('what a write tells the others', () => {
     expect(announcementOf('ben', snap(), { kind: 'unhide' }, NOW)).toBeNull()
   })
 })
+
+describe('emoji and discard announcements', () => {
+  it('only announces the first addition, never a retry, removal, or discarded recording', () => {
+    const fresh = snap({ reactions: [{ by: 'ana', emoji: '❤️', at: NOW }] })
+    expect(announcementOf('ana', fresh, { kind: 'reaction', emoji: '❤️', value: true }, NOW)).toEqual({ kind: 'reaction', emoji: '❤️' })
+    expect(announcementOf('ana', fresh, { kind: 'reaction', emoji: '❤️', value: true }, 'later')).toBeNull()
+    expect(announcementOf('ana', fresh, { kind: 'reaction', emoji: '❤️', value: false }, NOW)).toBeNull()
+    expect(announcementOf('ana', fresh, { kind: 'discard-reaction', commentId: 'c1' }, NOW)).toBeNull()
+  })
+})

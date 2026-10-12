@@ -258,7 +258,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
 
   async function reactionAudioUrl(m: M, snapId: string, commentId: string): Promise<string> {
     const s = await visibleSnap(m, snapId)
-    const rec = s.comments?.find((c) => c.id === commentId)?.recording
+    const rec = s.comments?.find((c) => c.id === commentId && !c.discardedAt)?.recording
     if (!rec) throw new RuleError('recording not found', 404)
     return host.media.signedUrl(rec.path)
   }
@@ -266,6 +266,13 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
   const transcriber = () => {
     if (!host.transcription) throw new RuleError('transcription is not available', 404)
     return host.transcription
+  }
+
+  async function transcriptSettled(result: Promise<Snap<M>>): Promise<Snap<M>> {
+    const snap = await result
+    try { await host.transcription?.settled?.(snap) }
+    catch (err) { try { host.log?.('transcription.settled failed', err) } catch { /* committed words remain saved */ } }
+    return snap
   }
 
   // The model call and the write of what came back, shared by the auto path and Try again. Both
@@ -291,9 +298,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
       console.error(`transcribeReaction: ${rec.path}`, err)
       // A refusal written for a reader (ours or the transcriber's own) keeps its words.
       const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
-      return rewrite(snapId, (s) => (stillThisRun(s) ? failReactionTranscript(s, commentId, reason) as Snap<M> : null))
+      return transcriptSettled(rewrite(snapId, (s) => (stillThisRun(s) ? failReactionTranscript(s, commentId, reason) as Snap<M> : null)))
     }
-    return rewrite(snapId, (s) => (stillThisRun(s) ? setReactionTranscript(s, commentId, words) as Snap<M> : null))
+    return transcriptSettled(rewrite(snapId, (s) => (stillThisRun(s) ? setReactionTranscript(s, commentId, words) as Snap<M> : null)))
   }
 
   // The AUTO path, scheduled by the attach route right after it creates a reaction. A no-op unless
@@ -303,7 +310,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     let ran = true
     const marked = await rewrite(snapId, (s) => {
       const c = (s.comments ?? []).find((x) => x.id === commentId)
-      if (!c?.recording) throw new RuleError('reaction not found', 404)
+      if (!c?.recording || c.discardedAt) throw new RuleError('reaction not found', 404)
       if (!canAutoTranscribe(c.recording)) { ran = false; return s }
       return markTranscribing(s, commentId, lang === 'auto' ? undefined : lang, { now: nowIso() }) as Snap<M>
     })
@@ -319,7 +326,7 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     const marked = await rewrite(snapId, (s) => {
       if (!canSeeSnap(s, m, ctx)) throw new RuleError('snap not found', 404)
       const c = (s.comments ?? []).find((x) => x.id === commentId)
-      if (!c?.recording) throw new RuleError('reaction not found', 404)
+      if (!c?.recording || c.discardedAt) throw new RuleError('reaction not found', 404)
       if (!canRetranscribe(c.recording, c.at, nowIso())) throw new RuleError('this reaction is still being transcribed', 409)
       return markTranscribing(s, commentId, lang === 'auto' ? undefined : lang, { now: nowIso() }) as Snap<M>
     })
@@ -431,9 +438,9 @@ export function createCowitnessStore<M extends string>(host: CowitnessHost<M>) {
     } catch (err) {
       console.error(`transcribeVoiceSnap: ${v.path}`, err)
       const reason = (isRuleError(err) || host.isRefusal?.(err) === true) ? (err as Error).message : 'the recording could not be made out'
-      return rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? failVoiceTranscript(s, reason) as Snap<M> : null))
+      return transcriptSettled(rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? failVoiceTranscript(s, reason) as Snap<M> : null)))
     }
-    return rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? setVoiceTranscript(s, words) as Snap<M> : null))
+    return transcriptSettled(rewrite(snapId, (s) => (isVoiceRun(s, v.startedAt) ? setVoiceTranscript(s, words) as Snap<M> : null)))
   }
 
   // The AUTO path, scheduled by the voice route right after it files a snap. A no-op unless the

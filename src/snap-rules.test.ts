@@ -311,3 +311,23 @@ describe('the home as the last day, and the shelf as everything before it', () =
     expect(todayOf([hid], 'ben', now).map((s) => s.id)).toEqual(['hid'])
   })
 })
+
+describe('emoji-first and optional spoken reactions', () => {
+  it('toggles one person’s emoji without changing another person’s mark', () => {
+    const first = applySnapPatch(snap(), 'ana', { kind: 'reaction', emoji: '❤️', value: true }, { now: NOW })
+    const two = applySnapPatch(first, 'ben', { kind: 'reaction', emoji: '❤️', value: true }, { now: NOW })
+    expect(applySnapPatch(two, 'ana', { kind: 'reaction', emoji: '❤️', value: true }, { now: 'later' }).reactions).toEqual(two.reactions)
+    expect(applySnapPatch(two, 'ana', { kind: 'reaction', emoji: '❤️', value: false }).reactions).toEqual([{ by: 'ben', emoji: '❤️', at: NOW }])
+    expect(() => applySnapPatch(snap(), 'ana', { kind: 'reaction', emoji: 'anything', value: true })).toThrow(/reaction/)
+  })
+  it('can discard only the actor’s own wordless settled voice reaction, retaining its record', () => {
+    const c = { id: 'c1', by: 'ana', text: '', at: NOW, recording: { path: 'audio', contentType: 'audio/mp4', durationSec: 4, status: 'failed' as const, reason: NOTHING_HEARD } }
+    const s = snap({ comments: [c] })
+    const changed = applySnapPatch(s, 'ana', { kind: 'discard-reaction', commentId: 'c1' }, { now: NOW })
+    expect(changed.comments).toEqual([{ ...c, discardedAt: NOW }])
+    expect(() => applySnapPatch(s, 'ben', { kind: 'discard-reaction', commentId: 'c1' })).toThrow(/own/)
+    for (const bad of [{ ...c, text: 'words' }, { ...c, recording: { ...c.recording, status: 'transcribing' as const } }, { ...c, recording: undefined }]) {
+      expect(() => applySnapPatch(snap({ comments: [bad] }), 'ana', { kind: 'discard-reaction', commentId: 'c1' })).toThrow(/wordless/)
+    }
+  })
+})
