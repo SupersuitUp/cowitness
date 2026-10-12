@@ -34,6 +34,26 @@ const rid = (x: string, c: string) => ({ params: Promise.resolve({ id: x, commen
 const video = (photoId: string, extra: object = {}) => post({ photoId, durationSec: 3, width: 720, height: 1280, ...extra })
 
 describe('the audience kind through the routes', () => {
+  it('announces one fresh emoji even if a retry has the exact same clock stamp', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-12T18:00:00Z'))
+    try {
+      const { host, f } = setup()
+      const reacted = vi.fn()
+      const h = { ...host, announce: { ...host.announce, reacted } }
+      const routes = createCowitnessHandlers(h)
+      f.seed(h.collection, { p1: { ...PHOTO, by: 'ben', caption: '', createdAt: 'x', witnessedAt: null, hiddenAt: null } })
+      for (const value of [true, true, false]) expect((await routes.snap.PATCH(patch({ kind: 'reaction', emoji: '🥹', value }), id('p1'))).status).toBe(200)
+      expect(reacted).toHaveBeenCalledOnce()
+    } finally { vi.useRealTimers() }
+  })
+
+  it('rejects a reaction recorded by a different signed-in person before upload or filing', async () => {
+    const { routes } = setup()
+    const body = { expectedBy: 'ben', commentId: 'r-abcdefgh', contentType: 'audio/mp4', durationSec: 4, size: 10 }
+    expect((await routes.reactionUploadUrl.POST(post(body), id('p1'))).status).toBe(403)
+    expect((await routes.reactions.POST(post(body), id('p1'))).status).toBe(403)
+  })
   it('lets the people who share file, refuses a witness, and stores "just us" and tags', async () => {
     const { host, routes, f } = setup()
     as(host, 'cy')

@@ -46,6 +46,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     if (!a) return
     if (a.kind === 'message') quietly('message', () => host.announce.message(m, snap, a.comment))
     else if (a.kind === 'heart') quietly('heart', () => host.announce.heart(m, snap, a.comment))
+    else if (a.kind === 'reaction' && host.announce.reacted && !before?.reactions?.some((r) => r.by === m && r.emoji === a.emoji)) quietly('reaction', () => host.announce.reacted!(m, snap, a.emoji))
     else if (a.kind === 'witnessed') quietly('witnessed', () => host.announce.witnessed(m, snap, a.firstWords))
     else if (a.kind === 'tagged') {
       // Only a change to a set that is not empty is news: the same tags again, or none, say nothing.
@@ -168,7 +169,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         const patch = host.commentImages ? await host.commentImages.claim(m, parsed) : parsed
         const now = new Date().toISOString()
         let before: Snap<M> | undefined
-        const snap = await store.patchSnap(m, id, patch, patch.kind === 'tag' ? { now, before: (s) => { before = s } } : { now })
+        const snap = await store.patchSnap(m, id, patch, patch.kind === 'tag' || patch.kind === 'reaction' ? { now, before: (s) => { before = s } } : { now })
         // The comment is saved. Attaching its pictures is the app's bookkeeping, and a failure there
         // must not turn a saved comment into an error: the phone would send it again.
         if (host.commentImages) {
@@ -185,7 +186,8 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
       POST: (req: Request, { params }: IdParams) => handle(async () => {
         const m = await signedIn(req)
         const { id } = await params
-        const body = (await req.json()) as { commentId: unknown; contentType: unknown; durationSec: unknown }
+        const body = (await req.json()) as { commentId: unknown; contentType: unknown; durationSec: unknown; expectedBy?: unknown }
+        if (body.expectedBy !== undefined && body.expectedBy !== m) throw new RuleError('sign in as the person who recorded this reaction', 403)
         const commentId = validateCommentId(body.commentId)
         const { snap, created } = await store.attachReaction(m, id, body)
         if (created && host.announce.spoken) {
@@ -204,7 +206,8 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
     reactionUploadUrl: {
       POST: (req: Request, { params }: IdParams) => handle(async () => {
         const m = await signedIn(req)
-        const body = (await req.json()) as { contentType: unknown; size: unknown; durationSec: unknown; commentId: unknown }
+        const body = (await req.json()) as { contentType: unknown; size: unknown; durationSec: unknown; commentId: unknown; expectedBy?: unknown }
+        if (body.expectedBy !== undefined && body.expectedBy !== m) throw new RuleError('sign in as the person who recorded this reaction', 403)
         return Response.json(await store.reactionUploadUrl(m, (await params).id, body))
       }),
     },

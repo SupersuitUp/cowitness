@@ -34,6 +34,8 @@ describe('CowitnessHome', () => {
     render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a'), q('b'), q('c')]} me="ana" names={NAMES} />)
     fireEvent.click(screen.getByRole('button', { name: 'Witness (3)' }))
     expect(screen.getByRole('dialog', { name: 'Witness' })).toBeInTheDocument()
+    expect(getUserMedia).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Add voice' }))
     expect(getUserMedia).toHaveBeenCalledTimes(1)
     expect(getUserMedia).toHaveBeenCalledWith({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
   })
@@ -60,6 +62,7 @@ describe('CowitnessHome', () => {
     try {
       render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a')]} me="ana" names={NAMES} />)
       fireEvent.click(screen.getByRole('button', { name: 'Witness (1)' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add voice' }))
       await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'End session' })) })
       await act(async () => { await vi.advanceTimersByTimeAsync(300) })
       expect(stopTrack).toHaveBeenCalled()
@@ -75,13 +78,14 @@ describe('CowitnessHome', () => {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia } })
     const { unmount } = render(<CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[q('a')]} me="ana" names={NAMES} />)
     fireEvent.click(screen.getByRole('button', { name: 'Witness (1)' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add voice' }))
     unmount()
     await act(async () => { await Promise.resolve(); await Promise.resolve() })
     expect(stopTrack).toHaveBeenCalled()
   })
   it('a reaction an earlier visit could not send goes as soon as the page opens, without waiting for a session', async () => {
     vault = memoryVault()
-    await vault.put({ id: 'r-held', noteId: 'snap:a', mimeType: 'audio/webm', createdAt: new Date().toISOString(), durationSec: 4, stopped: true, chunks: [new Blob(['opus'])] })
+    await vault.put({ id: 'r-held', noteId: 'snap-member:ana:a', mimeType: 'audio/webm', createdAt: new Date().toISOString(), durationSec: 4, stopped: true, chunks: [new Blob(['opus'])] })
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => new Response(JSON.stringify(String(url).endsWith('/upload-url') ? { uploaded: true } : { comments: [] })))
     vi.stubGlobal('fetch', fetchMock)
     try {

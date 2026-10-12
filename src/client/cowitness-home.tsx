@@ -48,19 +48,18 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
     if (sentHeld.current) return
     sentHeld.current = true
     const v = indexedDbVault() ?? memoryVault()
-    void sendHeld(v).catch(() => {})
+    void sendHeld(v, undefined, me).catch(() => {})
     if (clientFeatures().voiceSnaps) void sendHeldVoiceSnaps(v, undefined, () => setDropped(true)).catch(() => {})
   }, [])
 
   // Everything that needs the user's gesture happens inside this tap: the microphone permission
   // (asked once for the whole session) and the AudioContext the level is read with.
-  const witness = () => {
+  const requestVoice = () => {
     const stream = navigator.mediaDevices?.getUserMedia
       ? navigator.mediaDevices.getUserMedia({ audio: SESSION_MIC_CONSTRAINTS })
       : Promise.reject(new Error('no microphone'))
     stream.catch(() => {})
     setMic({ stream, ctx: newAudioContext() })
-    setOpen(true)
   }
 
   // Release the microphone and the AudioContext this page asked for.
@@ -92,7 +91,7 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
         {queue.length > 0 ? (
           <button
             type="button"
-            onClick={witness}
+            onClick={() => setOpen(true)}
             className="flex h-16 w-full items-center justify-center rounded-2xl text-xl transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none"
             style={{ backgroundColor: ACCENT, color: ON_INK, fontFamily: SERIF, fontWeight: 500 }}
           >
@@ -116,6 +115,7 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
         <WitnessSession
           queue={queue} me={me} names={names}
           mic={mic?.stream ?? null}
+          onRequestVoice={requestVoice}
           listen={(s) => analyserListener(s, mic?.ctx ?? null)}
           onClose={endSession}
         />

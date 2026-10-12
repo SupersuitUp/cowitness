@@ -3,6 +3,7 @@ import type { Circle } from './features.js'
 import type { Comment, CowitnessSummary, FiledMedia, Recording, Snap, SnapPatch } from './types.js'
 import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from './tag-rules.js'
 import { RuleError, addComment, heartComment, lastMessageFromOther, validateClip, audioExtension, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
+import { DISCUSSION_EMOJIS, setEmojiReaction } from './discussion.js'
 
 // Cowitness, as rules. Pure and synchronous so every one of them is tested without Firebase;
 // snaps-store.ts only reads, calls one of these, and writes.
@@ -66,6 +67,19 @@ export function applySnapPatch(
       return addComment(s, actor, patch.text, { now, id: opts.id, images: patch.images })
     case 'comment-heart':
       return heartComment(s, actor, patch.commentId, patch.value, { now })
+    case 'reaction': {
+      if (!(DISCUSSION_EMOJIS as readonly string[]).includes(patch.emoji) || typeof patch.value !== 'boolean') throw new RuleError('unsupported emoji reaction', 400)
+      const result = setEmojiReaction(s.reactions ?? [], { by: actor, emoji: patch.emoji, at: now }, patch.value)
+      return result.changed ? { ...s, reactions: result.reactions } : s
+    }
+    case 'discard-reaction': {
+      const c = s.comments?.find((c) => c.id === patch.commentId)
+      if (!c) throw new RuleError('reaction not found', 404)
+      if (c.by !== actor) throw new RuleError('only your own reaction can be discarded', 403)
+      if (c.discardedAt) return s
+      if (!canDiscardReaction(c, actor)) throw new RuleError('only a wordless recording can be discarded after transcription', 400)
+      return { ...s, comments: s.comments!.map((c) => c.id === patch.commentId ? { ...c, discardedAt: now } : c) }
+    }
     case 'hide':
       if (s.by !== actor) throw new RuleError('only the member who shared it can hide it', 403)
       return s.hiddenAt ? s : { ...s, hiddenAt: now }
@@ -228,9 +242,12 @@ export function addVoiceReaction(s: Snap, actor: Member, commentId: string, rec:
 
 type Spoken = Comment & { recording: Recording }
 
+export const canDiscardReaction = (c: Comment, actor: Member): boolean =>
+  c.by === actor && !!c.recording && !c.text.trim() && !c.images?.length && c.recording.status !== 'transcribing' && !c.discardedAt
+
 function onRecording(s: Snap, commentId: string, change: (c: Spoken) => Comment): Snap {
   const target = (s.comments ?? []).find((c) => c.id === commentId)
-  if (!target?.recording) throw new RuleError('reaction not found', 404)
+  if (!target?.recording || target.discardedAt) throw new RuleError('reaction not found', 404)
   return { ...s, comments: (s.comments ?? []).map((c) => (c.id === commentId ? change(c as Spoken) : c)) }
 }
 

@@ -9,6 +9,7 @@ export type Announcement<M extends string = string> =
   | { kind: 'heart'; comment: Comment<M> }
   | { kind: 'witnessed'; firstWords: string }
   | { kind: 'tagged'; ids: string[] }
+  | { kind: 'reaction'; emoji: string }
 
 export function announcementOf<M extends string>(
   m: M, snap: Snap<M>, patch: SnapPatch, now: string, witnessing: Witnessing = 'each-other',
@@ -21,6 +22,9 @@ export function announcementOf<M extends string>(
     // Only the request that set the heart is news: a second tap keeps the first stamp.
     const c = (snap.comments ?? []).find((x) => x.id === patch.commentId)
     return c && c.by !== m && c.hearts?.[m] === now ? { kind: 'heart', comment: c } : null
+  }
+  if (patch.kind === 'reaction' && patch.value) {
+    return snap.reactions?.some((r) => r.by === m && r.emoji === patch.emoji && r.at === now) ? { kind: 'reaction', emoji: patch.emoji } : null
   }
   if (patch.kind === 'witness') {
     // Only the request that set the stamp is news; the stamp is the route's `now`. In the audience

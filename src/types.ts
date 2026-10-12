@@ -16,8 +16,11 @@ export interface CommentImage { id: string; width: number; height: number }
 // One message under a snap. Sent, never edited. `hearts` maps a member to when they hearted it.
 export interface Comment<M extends string = string> {
   id: string; by: M; text: string; at: string
+  /** A wordless recording its author chose to remove from the conversation. Bytes are retained. */
+  discardedAt?: string
   hearts?: Partial<Record<M, string>>; recording?: Recording; quote?: string; images?: CommentImage[]
 }
+export interface EmojiReaction<M extends string = string> { by: M; emoji: string; at: string }
 export type MediaKind = 'photo' | 'video'
 // A voice snap is a recording with no picture; its words arrive later, like a spoken reaction's.
 export type SnapKind = MediaKind | 'voice'
@@ -52,6 +55,7 @@ export interface Snap<M extends string = string> {
   justUs?: true
   tags?: string[]
   comments?: Comment<M>[]
+  reactions?: EmojiReaction<M>[]
   createdAt: string
 }
 // A snap the app's media pipeline made, which is the only kind its media.urls is ever handed.
@@ -67,6 +71,8 @@ export type SnapView<M extends string = string> = Snap<M> & MediaUrls
 export type SnapPatch =
   | { kind: 'comment'; text: string; images?: CommentImage[] }
   | { kind: 'comment-heart'; commentId: string; value: boolean }
+  | { kind: 'reaction'; emoji: string; value: boolean }
+  | { kind: 'discard-reaction'; commentId: string }
   | { kind: 'hide' }
   | { kind: 'unhide' }
   | { kind: 'witness'; text?: string }

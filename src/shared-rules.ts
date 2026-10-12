@@ -50,7 +50,7 @@ export function parseCommentHeart(b: { commentId?: unknown; value?: unknown }): 
 }
 
 export function threadOf<M extends string>(p: Threaded<M>): Comment<M>[] {
-  return [...(p.comments ?? [])].sort((a, b) => a.at.localeCompare(b.at))
+  return (p.comments ?? []).filter((c) => !c.discardedAt).sort((a, b) => a.at.localeCompare(b.at))
 }
 
 // Sent, never edited. A message with neither words nor pictures is a mis-tap and is refused.

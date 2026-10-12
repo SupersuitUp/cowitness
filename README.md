@@ -286,6 +286,41 @@ mounted its routes or what it calls things, so a missing value is a wrong addres
 | `onSent(next)` | Call with the server's conversation after a send lands, so the snap shows it. |
 | `audioSrc(c)` | Where a message's recording plays from, or `null` when it has none. |
 | `onRetranscribe(commentId)` | Call to transcribe a message's recording again, with no re-recording. |
+| `reactions`, `onReact(emoji, value)` | Render shared `EmojiReactions` and forward its toggle. The patch is saved transactionally; retries and removals are quiet. |
+| `onDiscard(commentId)` | Offer when `canDiscardReaction(comment, me)` is true. Removes an author's wordless recording from the visible conversation, retaining its record and bytes. |
+
+### Shared discussions and optional voice
+
+`DiscussionInput` and `DiscussionSend` are controlled client components for the host's own
+composer. The input keeps a 17px font and both preserve a 44px minimum touch target. Hosts keep
+their authorization, send transport and attachments. `readDiscussionDraft`, `writeDiscussionDraft`
+and `clearDiscussionDraft(key, sentText)` preserve existing session-storage keys and avoid
+clearing newer words after a slower send. Scope draft keys to the person and content item.
+
+`EmojiReactions({me, names, marks, onToggle, busy?, existingOnly?, accent?, hairline?})` draws
+the shared six-emoji palette with pressed state, counts and names. Standalone screens may pass
+their own accent and hairline without configuring Cowitness. Pure `appendCommentOnce` and
+`setEmojiReaction` in the root entry provide retry-id and toggle rules; hosts supply any passage
+anchor comparison and persist inside their own transaction.
+
+Cowitness opens with emojis and typing. It asks for the microphone only on **Add voice**;
+after that one tap the session keeps hands-free speech recording. Configure the host's
+`transcription` adapter to write words automatically after upload. Its optional
+`settled(snap)` hook runs after a committed transcript or failure, including voice snaps and
+retries, so search can index the words when they arrive. Hook failures are logged without
+losing saved words. Index only visible, non-discarded comments and enforce access again at read time.
+
+`CompactAudio({src, label, durationSec?, tone?})` supplies labeled play/pause, seeking, time and
+playback errors. `tone` is `light` (default) or `dark`. `VoiceMedia` puts automatically refreshed
+words above this player. Hosts render it under reply transcripts instead of native audio bars.
+Discard never deletes storage: actively transcribing recordings, text/image replies and another
+person's recordings are refused. Audio and retranscription routes refuse discarded replies.
+
+New witness recordings are held under `reactionKey(snapId, member)` and retried with
+`sendHeld(vault, undefined, member)`. `sendReaction(..., member)` checks the signed-in identity
+on upload and filing, including account changes mid-send. Scoped retry leaves legacy unowned
+recordings held for recovery rather than attributing them to whoever next signs in. The optional
+member parameter preserves the legacy helper API for existing hosts; new callers should pass it.
 
 **Theme: every token.** A token left out keeps a neutral default.
 
@@ -365,10 +400,8 @@ it is.
 In an app added to the home screen, iOS does not remember camera, microphone or motion
 permission between launches, and Safari's per-site "Allow" setting does not reach it. So each
 launch asks again: motion and camera on the first share (motion is how a landscape snap taken
-with rotation lock on comes out landscape), and the microphone on the Witness tap (it records
-spoken reactions hands-free). This is the platform, not a defect here. Each prompt was kept on
-purpose (decided 2026-10-10): dropping motion turns those landscape snaps sideways, and asking for
-the microphone only when someone chooses to speak would end hands-free reactions.
+with rotation lock on comes out landscape), and microphone on Add voice. The microphone is
+optional; after choosing it, spoken reactions remain hands-free for the session.
 
 ## Releasing
 

@@ -41,6 +41,17 @@ describe('WitnessSession, typing only', () => {
     expect(container.querySelector('time')).toHaveAttribute('dateTime', '2026-09-27T14:03:00')
   })
 
+  it('saves an emoji independently of voice and keeps it when Next advances', async () => {
+    fetchMock.mockResolvedValue(Response.json({ reactions: [{ by: 'ana', emoji: '❤️', at: 'x' }] }))
+    render(<WitnessSession queue={[snap('a'), snap('b')]} me="ana" names={NAMES} onClose={() => {}} />)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add ❤️' })) })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ kind: 'reaction', emoji: '❤️', value: true })
+    expect(screen.getByRole('button', { name: 'Remove ❤️' })).toHaveAttribute('aria-pressed', 'true')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next' })) })
+    expect(screen.getByText('caption b')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add ❤️' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('Next with nothing typed marks it witnessed and moves on', async () => {
     render(<WitnessSession queue={[snap('a'), snap('b')]} me="ana" names={NAMES} onClose={() => {}} />)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next' })) })
@@ -226,7 +237,7 @@ describe('WitnessSession, with the microphone', () => {
     expect(ticket.commentId).toMatch(/^r-/)
     expect(filed.commentId).toBe(ticket.commentId)
     // Sent, so let go of. (Snap b's own recording has already begun.)
-    expect((await vault.all()).map((r) => r.noteId)).toEqual(['snap:b'])
+    expect((await vault.all()).map((r) => r.noteId)).toEqual([reactionKey('b', 'ana')])
   })
 
   it('silence is not stored: only the witness is sent', async () => {

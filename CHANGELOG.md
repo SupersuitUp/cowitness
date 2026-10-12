@@ -2,6 +2,14 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.1 (2026-10-12)
+
+- Witness with emojis and typing first. Add voice optionally; after that tap, speech is recorded hands-free and transcribed through the host adapter. Each snap keeps its own emoji selection and retries remain quiet.
+- Shared discussion input, send button, emoji palette, draft helpers, retry-id rules and reaction toggle rules can be reused by a host's other tiles, including transcript passages.
+- Compact custom audio playback keeps transcripts foremost, supports keyboard seeking and labeled play/pause, and reports playback failures. Voice-note words refresh automatically while transcription is pending.
+- An author can discard a wordless recorded reply after transcription finishes. The conversation hides it while retaining its record and audio; other people's replies, words, images and active transcriptions are protected.
+- The optional transcription settled hook lets hosts index words after they are saved. Member-scoped held reaction retries and signed-in identity checks prevent replaying a recorded reply under another person after an account change.
+
 ## 0.3.0 (2026-10-12)
 
 - **`host.agent` and `handlers.agent`: the Mac posts a snap as one member (ticket, file, read back).**

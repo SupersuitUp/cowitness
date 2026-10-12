@@ -28,12 +28,17 @@ export function parseSnapVideoBody(body: unknown): {
 }
 
 export function parseSnapPatch(body: unknown, allow: { tags?: boolean; justUs?: boolean } = {}): SnapPatch {
-  const b = (body ?? {}) as { kind?: unknown; text?: unknown; commentId?: unknown; value?: unknown; images?: unknown; ids?: unknown }
+  const b = (body ?? {}) as { kind?: unknown; text?: unknown; commentId?: unknown; value?: unknown; images?: unknown; ids?: unknown; emoji?: unknown }
   switch (b.kind) {
     case 'comment':
       return parseCommentBody(b)
     case 'comment-heart':
       return parseCommentHeart(b)
+    case 'reaction':
+      if (typeof b.emoji !== 'string' || typeof b.value !== 'boolean') throw new RuleError('emoji and boolean value are required', 400)
+      return { kind: 'reaction', emoji: b.emoji, value: b.value }
+    case 'discard-reaction':
+      return { kind: 'discard-reaction', commentId: id(b.commentId, 'commentId') }
     case 'hide':
       return { kind: 'hide' }
     case 'unhide':

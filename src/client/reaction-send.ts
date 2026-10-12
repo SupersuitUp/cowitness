@@ -6,23 +6,29 @@ import { audioOf, forget, isEmpty, type VaultStore } from './recording-vault.js'
 
 // A spoken reaction, sent the way a Notes recording is: a ticket, the bytes straight to storage,
 // then the filing. Any failure throws, and the caller keeps the recording in the phone's vault.
-export const reactionKey = (snapId: string) => `snap:${snapId}`
-export const snapIdOfKey = (key: string) => (key.startsWith('snap:') ? key.slice(5) : null)
+export const reactionKey = (snapId: string, member?: string) => member === undefined ? `snap:${snapId}` : `snap-member:${encodeURIComponent(member)}:${encodeURIComponent(snapId)}`
+export const snapIdOfKey = (key: string, member?: string) => {
+  if (member === undefined) return key.startsWith('snap:') ? key.slice(5) : null
+  const prefix = `snap-member:${encodeURIComponent(member)}:`
+  if (!key.startsWith(prefix)) return null
+  try { return decodeURIComponent(key.slice(prefix.length)) } catch { return null }
+}
 
 // commentId is minted by the CALLER, not here: for a fresh reaction it is the id of the vault
 // record the caller just wrote, and for a resend of a held recording it is that same record's
 // id again (see sendHeld below). That is what makes a retry idempotent: the id never changes
 // between attempts, so the server's own addVoiceReaction collapses a second attach into a no-op
 // instead of filing a duplicate comment.
-export async function sendReaction(snapId: string, blob: Blob, durationSec: number, commentId: string): Promise<Comment[]> {
+export async function sendReaction(snapId: string, blob: Blob, durationSec: number, commentId: string, member?: string): Promise<Comment[]> {
   const contentType = blob.type || 'audio/webm'
-  const issued = await postJson(`${clientConfig().apiBase}/${snapId}/reactions/upload-url`, { contentType, size: blob.size, durationSec, commentId })
+  const identity = member === undefined ? {} : { expectedBy: member }
+  const issued = await postJson(`${clientConfig().apiBase}/${snapId}/reactions/upload-url`, { contentType, size: blob.size, durationSec, commentId, ...identity })
   if (!issued.ok) throw new Error(`ticket refused (${issued.status})`)
   const t = (await issued.json()) as { uploaded?: true; url?: string; requiredHeaders?: Record<string, string> }
   // Already there from an earlier attempt whose response never made it back (a resend, not a
   // fresh send): nothing to PUT, and PUTting it again would only 412 against create-once.
   if (!t.uploaded) await putWithProgress(t.url!, blob, t.requiredHeaders!)
-  const filed = await postJson(`${clientConfig().apiBase}/${snapId}/reactions`, { commentId, contentType, durationSec })
+  const filed = await postJson(`${clientConfig().apiBase}/${snapId}/reactions`, { commentId, contentType, durationSec, ...identity })
   if (!filed.ok) throw new Error(`filing refused (${filed.status})`)
   const snap = (await filed.json()) as { comments?: Comment[] }
   return snap.comments ?? []
@@ -36,13 +42,14 @@ export async function sendReaction(snapId: string, blob: Blob, durationSec: numb
 // The vault record's own id IS the commentId, on every attempt: it does not change between a
 // first try and a later retry of the same held recording, so a lost response never turns into
 // a second filed comment.
-export async function sendHeld(store: VaultStore, send: typeof sendReaction = sendReaction): Promise<number> {
+export async function sendHeld(store: VaultStore, send: typeof sendReaction = sendReaction, member?: string): Promise<number> {
   let sent = 0
   for (const rec of await store.all()) {
-    const snapId = snapIdOfKey(rec.noteId)
+    const snapId = snapIdOfKey(rec.noteId, member)
     if (!snapId || !rec.stopped || isEmpty(rec)) continue
     try {
-      await send(snapId, audioOf(rec), rec.durationSec, rec.id)
+      if (member === undefined) await send(snapId, audioOf(rec), rec.durationSec, rec.id)
+      else await send(snapId, audioOf(rec), rec.durationSec, rec.id, member)
       await forget(store, rec.id)
       sent += 1
     } catch {

@@ -1,6 +1,6 @@
 'use client'
 
-import { CowitnessHome, CowitnessProvider, type ThreadSlotProps } from '@supersuit/cowitness/client'
+import { CowitnessHome, CowitnessProvider, CompactAudio, DiscussionInput, DiscussionSend, EmojiReactions, type ThreadSlotProps } from '@supersuit/cowitness/client'
 
 const Thread = ({ comments }: ThreadSlotProps) => <ul>{(comments ?? []).map((c) => <li key={c.id}>{c.text}</li>)}</ul>
 
@@ -15,6 +15,10 @@ export function Home() {
       theme={{ ink: '#222222' }}
     >
       <CowitnessHome rows={[]} streak={[]} witnessed={0} queue={[]} me="a" names={{ a: 'A', b: 'B' }} />
+      <EmojiReactions me="a" names={{ a: 'A', b: 'B' }} marks={[]} onToggle={() => {}} />
+      <DiscussionInput aria-label="Reply" />
+      <DiscussionSend busy={false} canSend={false} onSend={() => {}} />
+      <CompactAudio src="/example.m4a" label="Example voice" durationSec={9} />
     </CowitnessProvider>
   )
 }

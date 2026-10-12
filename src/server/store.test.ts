@@ -21,6 +21,28 @@ const AUDIO = 'p/snaps-audio/x1/r-abcdefgh.m4a'
 const attach = { commentId: 'r-abcdefgh', contentType: 'audio/mp4', durationSec: 4 }
 
 describe('filing a snap', () => {
+  it('hands the host committed transcript words for search indexing, without making hook failures lose them', async () => {
+    const settled = vi.fn(async () => { throw new Error('index temporarily unavailable') })
+    const { b, f, store } = setup({ transcription: { languages: ['en'], transcribe: async () => 'searchable reply', settled } })
+    b.put(AUDIO, Buffer.from('aa'))
+    await store.attachReaction('ana', 'x1', attach)
+    const done = await store.transcribeReaction('x1', attach.commentId)
+    expect(done.comments?.[0].text).toBe('searchable reply')
+    expect(settled).toHaveBeenCalledWith(expect.objectContaining({ id: 'x1', comments: expect.arrayContaining([expect.objectContaining({ text: 'searchable reply' })]) }))
+    expect(f.raw('snaps', 'x1')?.comments).toEqual(done.comments)
+  })
+
+  it('a discarded wordless reaction stays stored and cannot be played or transcribed again', async () => {
+    const { b, f, store } = setup({ transcription: { languages: [], transcribe: async () => '' } })
+    b.put(AUDIO, Buffer.from('aa'))
+    await store.attachReaction('ana', 'x1', attach)
+    await store.transcribeReaction('x1', attach.commentId)
+    await store.patchSnap('ana', 'x1', { kind: 'discard-reaction', commentId: attach.commentId })
+    expect(f.raw('snaps', 'x1')?.comments).toEqual(expect.arrayContaining([expect.objectContaining({ discardedAt: expect.any(String) })]))
+    await expect(store.reactionAudioUrl('ana', 'x1', attach.commentId)).rejects.toMatchObject({ status: 404 })
+    await expect(store.retranscribeReaction('ana', 'x1', attach.commentId)).rejects.toMatchObject({ status: 404 })
+    expect((await b.bucket.file(AUDIO).exists())[0]).toBe(true)
+  })
   it("goes through the app's own pipeline, into the app's list, unwitnessed", async () => {
     const { host, f, store } = setup()
     const s = await store.finalizeSnapPhoto('ana', 'x9', { caption: ' lunch ' })

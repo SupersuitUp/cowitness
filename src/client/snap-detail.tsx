@@ -4,7 +4,7 @@ import { clientConfig } from './config.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Member, MemberNames } from '../types.js'
-import type { Comment, Recording, SnapView } from '../types.js'
+import type { Comment, Recording, SnapView, SnapPatch } from '../types.js'
 import { formatWhen } from './format-when.js'
 import { noPosterBg } from './video-mark.js'
 import { HAIRLINE, INK, MUTED, SERIF } from './theme.js'
@@ -26,6 +26,8 @@ function startTranscribing(rec: Recording, now: string): Recording {
 export function SnapDetail({ snap, me, names, tagLabels }: { snap: SnapView; me: Member; names: MemberNames; tagLabels?: Record<string, string> }) {
   const router = useRouter()
   const [comments, setComments] = useState<Comment[] | undefined>(snap.comments)
+  const [reactions, setReactions] = useState(snap.reactions ?? [])
+  const discussionBusy = useRef(false)
   const [retryNote, setRetryNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const mine = snap.by === me
@@ -121,6 +123,26 @@ export function SnapDetail({ snap, me, names, tagLabels }: { snap: SnapView; me:
     if (value) router.push(clientConfig().pageBase); else router.refresh()
   }
 
+  const patchDiscussion = async (patch: SnapPatch) => {
+    if (discussionBusy.current) return
+    discussionBusy.current = true
+    setRetryNote(null)
+    try {
+      const res = await fetch(`${clientConfig().apiBase}/${snap.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      })
+      if (!res.ok) throw new Error('not saved')
+      const data = await res.json() as SnapView
+      // Emoji writes never replace comments: a simultaneous composer send may have landed later.
+      if (patch.kind === 'reaction') setReactions(data.reactions ?? [])
+      if (patch.kind === 'discard-reaction') {
+        const discarded = data.comments?.find((c) => c.id === patch.commentId)
+        if (discarded) commit((cs) => (cs ?? []).map((c) => c.id === discarded.id ? discarded : c))
+      }
+    } catch { setRetryNote('Not saved. Try again.') }
+    finally { discussionBusy.current = false }
+  }
+
   return (
     <div className="px-4">
       <div className="overflow-hidden rounded-2xl" style={{ backgroundColor: HAIRLINE }}>
@@ -149,7 +171,9 @@ export function SnapDetail({ snap, me, names, tagLabels }: { snap: SnapView; me:
       {retryNote && <p aria-live="polite" className="mt-2 text-xs" style={{ color: MUTED }}>{retryNote}</p>}
       {/* The conversation is the app's own, so it looks like every other conversation in it. */}
       {!hidden && clientConfig().renderThread({
-        snapId: snap.id, me, names, comments, onSent: (next) => commit(() => next),
+        snapId: snap.id, me, names, comments: comments?.filter((c) => !c.discardedAt), onSent: (next) => commit(() => next),
+        reactions, onReact: (emoji, value) => { void patchDiscussion({ kind: 'reaction', emoji, value }) },
+        onDiscard: (commentId) => { void patchDiscussion({ kind: 'discard-reaction', commentId }) },
         audioSrc: (c) => (c.recording ? `${clientConfig().apiBase}/${snap.id}/reactions/${c.id}/audio` : null),
         onRetranscribe: (id) => { void retranscribe(id) },
       })}
