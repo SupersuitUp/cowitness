@@ -12,7 +12,11 @@ const store = {
   voiceUploadUrl: vi.fn(async (_m: M, i: { snapId: string }) => ({ snapId: i.snapId, url: 'https://storage.example.com/v', requiredHeaders: { 'Content-Type': 'audio/mp4' } })),
   fileVoiceSnap: vi.fn(async (m: M, i: { snapId: string }) => ({ snap: { id: i.snapId, by: m, kind: 'voice', witnessedAt: null }, created: true })),
   transcribeVoiceSnap: vi.fn(),
-  getSnapView: vi.fn(async (_m: M, id: string) => (id === 'there' ? { id, witnessedAt: '2026-10-11T10:00:00.000Z' } : null)),
+  // Like the real store, a snap is visible to the member whoever authored it.
+  getSnapView: vi.fn(async (_m: M, id: string) => ({
+    there: { id, by: 'ana', witnessedAt: '2026-10-11T10:00:00.000Z', witnessedBy: { ben: '2026-10-11T10:00:00.000Z' }, comments: [{ text: 'hi' }], photoUrl: 'https://storage.example.com/signed' },
+    theirs: { id, by: 'ben', witnessedAt: null, comments: [{ text: 'private' }], photoUrl: 'https://storage.example.com/signed2' },
+  } as Record<string, unknown>)[id] ?? null),
 }
 const announce = { shared: vi.fn(), witnessed: vi.fn(), message: vi.fn(), heart: vi.fn() }
 const host = {
@@ -59,9 +63,34 @@ describe('the agent posts a snap', () => {
   it('refuses an unknown kind', async () => {
     expect((await h.agent.ticket.POST(req({ kind: 'gif' }))).status).toBe(400)
   })
-  it('reads one snap back for its witness state, 404 when absent', async () => {
-    expect(await (await h.agent.snap.GET(req(), { params: Promise.resolve({ id: 'there' }) })).json()).toMatchObject({ witnessedAt: '2026-10-11T10:00:00.000Z' })
-    expect(store.getSnapView).toHaveBeenCalledWith('ana', 'there')
+  it('reads only its own snap back, and only the witness fields', async () => {
+    const own = await (await h.agent.snap.GET(req(), { params: Promise.resolve({ id: 'there' }) })).json()
+    expect(own).toEqual({ id: 'there', witnessedAt: '2026-10-11T10:00:00.000Z', witnessedBy: { ben: '2026-10-11T10:00:00.000Z' } })
+    expect((await h.agent.snap.GET(req(), { params: Promise.resolve({ id: 'theirs' }) })).status).toBe(404)
+  })
+  it('a null body is a 400, not a 500', async () => {
+    const nul = (path: string) => new Request(`https://app.example.com/api/snaps/agent${path}`, { method: 'POST', body: 'null' })
+    expect((await h.agent.ticket.POST(nul('/ticket'))).status).toBe(400)
+    expect((await h.agent.file.POST(nul(''))).status).toBe(400)
+  })
+  it('justUs and tags in a file body are ignored, for photo and video', async () => {
+    await h.agent.file.POST(req({ kind: 'photo', photoId: 'ph1', justUs: true, tags: ['a'] }))
+    expect(store.finalizeSnapPhoto.mock.calls[0]![2]).not.toHaveProperty('justUs')
+    expect(store.finalizeSnapPhoto.mock.calls[0]![2]).not.toHaveProperty('tags')
+    await h.agent.file.POST(req({ kind: 'video', photoId: 'vd1', justUs: true, tags: ['a'], meta: { durationSec: 3, width: 1080, height: 1920 } }))
+    expect(store.finalizeSnapVideo.mock.calls[0]![2]).not.toHaveProperty('justUs')
+    expect(store.finalizeSnapVideo.mock.calls[0]![2]).not.toHaveProperty('tags')
+    await h.agent.file.POST(req({ kind: 'voice', photoId: 'x'.repeat(24), contentType: 'audio/mp4', justUs: true, tags: ['a'], meta: { durationSec: 4 } }))
+    expect(store.fileVoiceSnap.mock.calls[0]![1]).not.toHaveProperty('justUs')
+  })
+  it('a voice note in an app with voice snaps off answers the package refusal', async () => {
+    const { RuleError } = await import('../errors.js')
+    store.voiceUploadUrl.mockRejectedValueOnce(new RuleError('voice snaps are off', 404))
+    const r = await h.agent.ticket.POST(req({ kind: 'voice', contentType: 'audio/mp4', size: 10, durationSec: 4 }))
+    expect(r.status).toBe(404)
+    expect(await r.json()).toEqual({ error: 'voice snaps are off' })
+  })
+  it('404 when the snap is absent', async () => {
     expect((await h.agent.snap.GET(req(), { params: Promise.resolve({ id: 'gone' }) })).status).toBe(404)
   })
 })

@@ -70,12 +70,17 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         if (!m) throw new RuleError('agent key required', 401)
         return m
       }
-      const mint = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('')
+      const mint = () => {
+        const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+        let id = ''
+        while (id.length < 24) for (const b of crypto.getRandomValues(new Uint8Array(32))) if (b < 248 && id.length < 24) id += abc[b % 62]
+        return id
+      }
       return {
         ticket: {
           POST: (req: Request) => handle(async () => {
             const m = await asAgent(req)
-            const b = (await req.json()) as { kind?: unknown; contentType?: unknown; size?: unknown; durationSec?: unknown }
+            const b = ((await req.json()) ?? {}) as { kind?: unknown; contentType?: unknown; size?: unknown; durationSec?: unknown }
             if (b.kind === 'photo') { const t = await host.agent!.photoTicket(m); return Response.json({ photoId: t.photoId, url: t.url, headers: t.headers ?? {} }) }
             if (b.kind === 'video') return Response.json(await host.agent!.videoTicket(m, { contentType: b.contentType, size: b.size }))
             if (b.kind === 'voice') {
@@ -88,7 +93,7 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         file: {
           POST: (req: Request) => handle(async () => {
             const m = await asAgent(req)
-            const b = (await req.json()) as { kind?: unknown; photoId?: unknown; contentType?: unknown; caption?: unknown; clientTakenAt?: unknown; meta?: { durationSec?: unknown; width?: unknown; height?: unknown } }
+            const b = ((await req.json()) ?? {}) as { kind?: unknown; photoId?: unknown; contentType?: unknown; caption?: unknown; clientTakenAt?: unknown; meta?: { durationSec?: unknown; width?: unknown; height?: unknown } }
             if (b.kind === 'photo') {
               const { photoId, caption, clientTakenAt, ...extra } = parseSnapPhotoBody({ photoId: b.photoId, caption: b.caption, clientTakenAt: b.clientTakenAt })
               const snap = await store.finalizeSnapPhoto(m, photoId, { caption, clientTakenAt, ...extra })
@@ -114,9 +119,12 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
         },
         snap: {
           GET: (req: Request, { params }: IdParams) => handle(async () => {
-            const snap = await store.getSnapView(await asAgent(req), (await params).id)
-            if (!snap) return Response.json({ error: 'not found' }, { status: 404 })
-            return Response.json(snap)
+            // Only the agent member's own snap, and only its witness state: another member's snap,
+            // its signed media and its comments never leave through the agent key.
+            const m = await asAgent(req)
+            const snap = await store.getSnapView(m, (await params).id)
+            if (!snap || snap.by !== m) return Response.json({ error: 'not found' }, { status: 404 })
+            return Response.json({ id: snap.id, witnessedAt: snap.witnessedAt ?? null, ...(snap.witnessedBy ? { witnessedBy: snap.witnessedBy } : {}) })
           }),
         },
       }
