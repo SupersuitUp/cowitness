@@ -15,8 +15,8 @@ import { ACCENT, HAIRLINE, INK, MUTED, ON_INK, SERIF } from './theme.js'
 // turned off, nothing is handed back and nothing stays held, even though a recorder whose tracks end
 // still reports its stop. The microphone is turned off on every path that opened it, including a
 // permission prompt that answers after the sheet has gone.
-export function VoiceNote({ onRecorded, onCancel, vaultKey = voiceSnapKey }: {
-  onRecorded(rec: { blob: Blob; durationSec: number; id: string }): void; onCancel?(): void; vaultKey?: (id: string) => string
+export function VoiceNote({ onRecorded, onCancel, vaultKey = voiceSnapKey, maxSec = RECORD_MAX_SEC }: {
+  onRecorded(rec: { blob: Blob; durationSec: number; id: string }): void; onCancel?(): void; vaultKey?: (id: string) => string; maxSec?: number
 }) {
   const [state, setState] = useState<'idle' | 'recording' | 'failed'>('idle')
   const [sec, setSec] = useState(0)
@@ -42,10 +42,10 @@ export function VoiceNote({ onRecorded, onCancel, vaultKey = voiceSnapKey }: {
     const t = setInterval(() => {
       const now = rec.current ? (Date.now() - rec.current.started) / 1000 : 0
       setSec(now)
-      if (now >= RECORD_MAX_SEC) stop()
+      if (now >= maxSec) stop()
     }, 250)
     return () => clearInterval(t)
-  }, [state])
+  }, [state, maxSec])
   useEffect(() => {
     mounted.current = true
     return () => { mounted.current = false; discard() }
