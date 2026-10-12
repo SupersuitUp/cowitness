@@ -2,6 +2,29 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.2.4 (2026-10-12)
+
+- **The streak takes a time zone, and the counting is no longer Cowitness's own copy of it.**
+  `CowitnessHome` and `StreakStrip` take `timeZone`: one named zone for everyone
+  (`'America/Chicago'`) or the zone each member keeps
+  (`{ ana: 'America/Chicago', ben: 'America/New_York' }`). A day then counts in every zone in play
+  rather than only its owner's, so a member's days are the union of those day keys and a together
+  day is the intersection of the members' unions. Left out, the strip counts the phone's own
+  calendar day exactly as it did in 0.2.3, so no app that passes nothing changes.
+
+  What this fixes: a phone an hour east of the zone the streak is kept in filed a late-evening
+  snap on the NEXT day, which opened a gap on every day its owner shared only late and showed that
+  owner's streak and the together streak as broken when neither was. Two people in Central and
+  Eastern, both sharing every day for fifteen days, read as 15 / 1 / 0 on the eastern phone and
+  15 / 15 / 15 in the zone they keep.
+
+- `src/streak.ts` and `src/zoned.ts` are now re-exports of
+  [`@supersuit/streak-steward`](https://www.npmjs.com/package/@supersuit/streak-steward) (a new
+  dependency), not implementations. They were a copy of the same code, which is why this one bug
+  existed in two places and was fixed in only one. Every name they exported is still exported, with
+  the same behaviour, plus `zonedStreakOf`, `zonedStreaksOf`, `zonesOf`, `localDayKey`,
+  `msUntilMidnight` and the types `StreakRow` and `StreakZones`.
+
 ## 0.2.3 (2026-10-09)
 
 - The language picker, the tag picker and the reminder times field were set at 14px, so iOS Safari zoomed the page when one was focused. They are now 16px (`text-base`) with the same height and padding. A test reads every input, textarea and select in the screens and fails if one is under 16px.
