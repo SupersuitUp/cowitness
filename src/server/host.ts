@@ -86,6 +86,19 @@ export interface CowitnessHost<M extends string> {
     /** Optional: a snap's tags were set. `ids` is the full list now on the snap. */
     tagged?(m: M, s: Snap<M>, ids: string[]): void
   }
+  /**
+   * Optional: lets one trusted agent (a Mac that posts on a member's behalf) file a snap as exactly
+   * one member, through this app's own upload pipeline. Without it the agent routes answer 401.
+   * The app vouches for a request with its own agent key; the session is never consulted.
+   */
+  agent?: {
+    /** The member this request's agent key acts as, or null. Never the session. */
+    member(req: Request): Promise<M | null>
+    /** The app's own photo ticket, issued to `m` (the same one its phone uses). */
+    photoTicket(m: M): Promise<{ photoId: string; url: string; headers?: Record<string, string> }>
+    /** The app's own video ticket, issued to `m`. */
+    videoTicket(m: M, input: { contentType: unknown; size: unknown }): Promise<{ photoId: string; videoUrl: string; posterUrl: string; requiredHeaders: { video: Record<string, string>; poster: Record<string, string> } }>
+  }
   /** Pictures sent in a snap's messages, kept by the app with every other conversation's pictures. */
   commentImages?: {
     claim(m: M, patch: SnapPatch): Promise<SnapPatch>
