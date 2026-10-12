@@ -2,6 +2,15 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.0 (2026-10-12)
+
+- **`host.agent` and `handlers.agent`: the Mac posts a snap as one member (ticket, file, read back).**
+  An app that adds an `agent` block to its host (`member`, `photoTicket`, `videoTicket`) mounts
+  three routes. The agent key acts as exactly one member and never reads the session; a snap is
+  filed and announced as that member's own share, through the app's own upload pipeline, and can
+  be read back for its witness state. Without the block every agent route answers 401. An app that
+  adds nothing changes in nothing.
+
 ## 0.2.4 (2026-10-12)
 
 - **The streak takes a time zone, and the counting is no longer Cowitness's own copy of it.**

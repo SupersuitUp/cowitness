@@ -210,6 +210,45 @@ time except during a live run, and by anyone else who can see it only when the r
 stalled for five minutes. A spoken reaction's words, as before, can be asked for again by anyone
 who can see the snap, except during a live run.
 
+## The Mac posts a snap
+
+A trusted agent (a Mac, not a phone) can file a snap as exactly one member through the app's own
+upload pipeline. Add `agent` to the host:
+
+```ts
+agent: {
+  member: async (req) => (req.headers.get('x-agent-key') === process.env.AGENT_KEY ? 'ana' : null),
+  photoTicket: (m) => photoTicketFor(m),          // the app's own photo ticket, the one its phone uses
+  videoTicket: (m, input) => videoTicketFor(m, input),
+},
+```
+
+`member` is the only door: it names the one member the key acts as, or null. The session is never
+read, and every agent route answers 401 `{ error: 'agent key required' }` when `member` answers
+null or the host has no `agent` block. Mount three files beside the others, all under one agent
+address `<api>/agent`:
+
+| `handlers.agent` | Route file |
+|---|---|
+| `.file.POST` | `<api>/agent/route.ts` |
+| `.ticket.POST` | `<api>/agent/ticket/route.ts` |
+| `.snap.GET` | `<api>/agent/[id]/route.ts` |
+
+Each is `export const runtime = 'nodejs'` and one line such as `export const { POST } = handlers.agent.file`
+(`.snap` exports `GET`; give the voice file route `maxDuration = 300`, which transcribes).
+
+1. `ticket` takes `{ kind: 'photo' | 'video' | 'voice', contentType, size, durationSec? }` and answers
+   `{ photoId, url, headers }` for a photo or a voice note (the voice id is minted here, 24
+   characters of `[A-Za-z0-9]`), or the video ticket (`photoId`, `videoUrl`, `posterUrl`,
+   `requiredHeaders`). The caller PUTs the bytes to the ticket's URL with exactly those headers.
+2. `file` takes `{ kind, photoId, contentType?, caption?, clientTakenAt?, meta? }`, files the snap
+   as that member and announces it exactly as a phone share is announced. A video's `meta` is
+   `{ durationSec, width, height }`; a voice note's is `{ durationSec }`. A voice note in an app
+   with voice snaps off answers the package's own refusal, so the caller can fall back to a text.
+3. `snap` reads back only a snap that member posted, and only `{ id, witnessedAt, witnessedBy }`.
+   It answers 404 when the snap is absent or someone else's; media URLs and comments never leave
+   through the agent key. A photo's size and type limits are the app's own photo ticket's.
+
 ## The screens (client)
 
 Render the screens inside `CowitnessProvider`, from one of the app's own `'use client'`

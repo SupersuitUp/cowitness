@@ -61,6 +61,74 @@ export function createCowitnessHandlers<M extends string>(host: CowitnessHost<M>
   }
 
   return {
+    // The Mac posts a snap as one member (Broadcast). The app vouches for the request with its own
+    // agent key through host.agent.member; the session is never read here. Filed and announced
+    // exactly as the phone's own share, through the app's own upload pipeline.
+    agent: (() => {
+      const asAgent = async (req: Request): Promise<M> => {
+        const m = host.agent ? await host.agent.member(req) : null
+        if (!m) throw new RuleError('agent key required', 401)
+        return m
+      }
+      const mint = () => {
+        const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+        let id = ''
+        while (id.length < 24) for (const b of crypto.getRandomValues(new Uint8Array(32))) if (b < 248 && id.length < 24) id += abc[b % 62]
+        return id
+      }
+      return {
+        ticket: {
+          POST: (req: Request) => handle(async () => {
+            const m = await asAgent(req)
+            const b = ((await req.json()) ?? {}) as { kind?: unknown; contentType?: unknown; size?: unknown; durationSec?: unknown }
+            if (b.kind === 'photo') { const t = await host.agent!.photoTicket(m); return Response.json({ photoId: t.photoId, url: t.url, headers: t.headers ?? {} }) }
+            if (b.kind === 'video') return Response.json(await host.agent!.videoTicket(m, { contentType: b.contentType, size: b.size }))
+            if (b.kind === 'voice') {
+              const t = await store.voiceUploadUrl(m, { snapId: mint(), contentType: b.contentType, size: b.size, durationSec: b.durationSec })
+              return Response.json('url' in t ? { photoId: t.snapId, url: t.url, headers: t.requiredHeaders } : { photoId: t.snapId, uploaded: true })
+            }
+            throw new RuleError('kind must be photo, video or voice', 400)
+          }),
+        },
+        file: {
+          POST: (req: Request) => handle(async () => {
+            const m = await asAgent(req)
+            const b = ((await req.json()) ?? {}) as { kind?: unknown; photoId?: unknown; contentType?: unknown; caption?: unknown; clientTakenAt?: unknown; meta?: { durationSec?: unknown; width?: unknown; height?: unknown } }
+            if (b.kind === 'photo') {
+              const { photoId, caption, clientTakenAt, ...extra } = parseSnapPhotoBody({ photoId: b.photoId, caption: b.caption, clientTakenAt: b.clientTakenAt })
+              const snap = await store.finalizeSnapPhoto(m, photoId, { caption, clientTakenAt, ...extra })
+              filed(m, snap)
+              return Response.json(snap)
+            }
+            if (b.kind === 'video') {
+              const { photoId, caption, meta, ...extra } = parseSnapVideoBody({ photoId: b.photoId, caption: b.caption, takenAt: b.clientTakenAt, ...(b.meta ?? {}) })
+              const snap = await store.finalizeSnapVideo(m, photoId, { caption, meta, ...extra })
+              filed(m, snap)
+              return Response.json(snap)
+            }
+            if (b.kind === 'voice') {
+              const { snap, created } = await store.fileVoiceSnap(m, { snapId: b.photoId, contentType: b.contentType, durationSec: b.meta?.durationSec, caption: b.caption })
+              if (created) {
+                filed(m, snap)
+                if (host.transcription) after(async () => { try { await store.transcribeVoiceSnap(snap.id) } catch (err) { console.error('voice snap transcription failed', err) } })
+              }
+              return Response.json(snap)
+            }
+            throw new RuleError('kind must be photo, video or voice', 400)
+          }),
+        },
+        snap: {
+          GET: (req: Request, { params }: IdParams) => handle(async () => {
+            // Only the agent member's own snap, and only its witness state: another member's snap,
+            // its signed media and its comments never leave through the agent key.
+            const m = await asAgent(req)
+            const snap = await store.getSnapView(m, (await params).id)
+            if (!snap || snap.by !== m) return Response.json({ error: 'not found' }, { status: 404 })
+            return Response.json({ id: snap.id, witnessedAt: snap.witnessedAt ?? null, ...(snap.witnessedBy ? { witnessedBy: snap.witnessedBy } : {}) })
+          }),
+        },
+      }
+    })(),
     // The archive: everything this person can see, newest first, with signed media.
     snaps: {
       GET: (req?: Request) => handle(async () => Response.json(await store.listSnaps(await signedIn(req)))),
