@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { captureStreak, householdStreakOf, streakOf, streaksOf } from './streak.js'
+import { captureStreak, householdStreakOf, streakOf, streaksOf, zonedStreakOf, zonedStreaksOf } from './streak.js'
+import { zoned } from './zoned.js'
 import type { SnapRow } from './format.js'
+import {
+  CHICAGO_TODAY, COUPLE_ZONE, EASTERN, EASTERN_TODAY, NOW as LATE_NOW, lateEveningTimes,
+} from '../test/support/late-evening-couple.js'
 
 // Local noon on a given day, so the tests read the same in any time zone the suite runs in.
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h).toISOString()
@@ -86,5 +90,48 @@ describe('the household streak', () => {
     // The zone falls back this weekend: three snaps on three local days, 07:30 UTC being 00:30 local before and 23:30 local after.
     const rows = [r('2026-10-31T07:30:00Z'), r('2026-11-01T08:30:00Z'), r('2026-11-02T08:30:00Z')]
     expect(householdStreakOf(rows, new Date('2026-11-02T20:00:00Z'), rule)).toMatchObject({ count: 3, capturedToday: true })
+  })
+})
+
+// The streak counted in a named zone instead of the phone's own day. The counting itself is the
+// package's (`@supersuit/streak-steward`); what is pinned here is the answer Cowitness depends on,
+// against the data the couple's own screen got wrong.
+describe('a streak read in named zones', () => {
+  const rows = (): SnapRow[] => lateEveningTimes().map(({ by, createdAt }) => ({
+    id: createdAt + by, by, caption: '', kind: 'photo', thumbUrl: null, durationSec: null,
+    createdAt, witnessedAt: null, hidden: false,
+  }))
+  const shape = (s: ReturnType<typeof zonedStreaksOf>) => [s.ana.count, s.ben.count, s.together.count]
+
+  it('is read at an instant where the two zones disagree about the day, or it proves nothing', () => {
+    expect(zoned(LATE_NOW, COUPLE_ZONE).dayKey).toBe(CHICAGO_TODAY)
+    expect(zoned(LATE_NOW, EASTERN).dayKey).toBe(EASTERN_TODAY)
+    expect(zoned(LATE_NOW, COUPLE_ZONE).dayKey).not.toBe(zoned(LATE_NOW, EASTERN).dayKey)
+  })
+
+  it('counts fifteen days each and fifteen together in the zone the couple keeps', () => {
+    expect(shape(zonedStreaksOf(rows(), LATE_NOW, ['ana', 'ben'], COUPLE_ZONE))).toEqual([15, 15, 15])
+  })
+
+  it('is the bug when the day is the phone\'s: a zone an hour east reads 15 / 1 / 0', () => {
+    expect(shape(zonedStreaksOf(rows(), LATE_NOW, ['ana', 'ben'], EASTERN))).toEqual([15, 1, 0])
+    // And the same rows counted on the device, which is what this screen did before it took a zone.
+    expect(shape(streaksOf(rows(), LATE_NOW, ['ana', 'ben']) as ReturnType<typeof zonedStreaksOf>)).toEqual([15, 1, 0])
+  })
+
+  it('reads a day in every zone in play, never only its owner\'s', () => {
+    // Her zone and his, which is the generous rule and NOT each member in their own: counted in
+    // his alone Ben reads 1, so his fifteen here is the union of the two doing the work.
+    const both = zonedStreaksOf(rows(), LATE_NOW, ['ana', 'ben'], { ana: COUPLE_ZONE, ben: EASTERN })
+    expect(shape(both)).toEqual([15, 15, 15])
+    expect(zonedStreakOf(rows().filter((r) => r.by === 'ben').map((r) => r.createdAt), LATE_NOW, EASTERN).count).toBe(1)
+  })
+
+  it('says today is done in the zone the couple keeps, and not done an hour east', () => {
+    // postedToday is what fades a pill and what the line under the pills reads from, so the wrong
+    // zone does not only shrink the number, it tells her she still owes a day she already shared.
+    const done = (s: ReturnType<typeof zonedStreaksOf>) => [s.ana.postedToday, s.ben.postedToday, s.together.postedToday]
+    expect(done(zonedStreaksOf(rows(), LATE_NOW, ['ana', 'ben'], COUPLE_ZONE))).toEqual([true, true, true])
+    expect(done(zonedStreaksOf(rows(), LATE_NOW, ['ana', 'ben'], EASTERN))).toEqual([false, true, false])
   })
 })

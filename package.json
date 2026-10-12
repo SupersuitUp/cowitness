@@ -53,6 +53,7 @@
     "voice"
   ],
   "dependencies": {
+    "@supersuit/streak-steward": "^0.1.1",
     "server-only": "^0.0.1"
   },
   "peerDependencies": {
