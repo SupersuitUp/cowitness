@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import type { Member, MemberNames, TagChoice } from '../types.js'
 import type { SnapView } from '../types.js'
 import type { SnapRow } from '../format.js'
+import type { StreakZones } from '../streak.js'
 import { AddSnap } from './add-snap.js'
 import { StreakStrip } from './streak-strip.js'
 import { SnapsArchive } from './snaps-archive.js'
@@ -26,9 +27,12 @@ import { ACCENT, MUTED, ON_INK, SERIF } from './theme.js'
 // because a phone only grants it there.
 // `can` is what the app says this person may do: someone who only witnesses is offered no share
 // sheet and is never asked to share, and someone who only shares is not told what is waiting.
-export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can = { share: true, witness: true }, tagChoices, languages }: {
+// `timeZone` is the zone the streak is counted in, one for everyone or one per member; without it
+// the strip counts the phone's own calendar day (`StreakStrip` says what that costs).
+export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can = { share: true, witness: true }, tagChoices, languages, timeZone }: {
   rows: SnapRow[]; streak: SnapRow[]; witnessed: number; queue: SnapView[]; me: Member; names: MemberNames
   can?: { share: boolean; witness: boolean }; tagChoices?: TagChoice[]; languages?: readonly string[]
+  timeZone?: StreakZones
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -83,7 +87,7 @@ export function CowitnessHome({ rows, streak, witnessed, queue, me, names, can =
   const empty = today ? 'Nothing shared in the last day.' : witnessed > 0 ? 'All caught up.' : undefined
   return (
     <>
-      <div className="mb-4"><StreakStrip rows={streak} me={me} names={names} shares={can.share} /></div>
+      <div className="mb-4"><StreakStrip rows={streak} me={me} names={names} shares={can.share} timeZone={timeZone} /></div>
       <div className="px-4">
         {queue.length > 0 ? (
           <button

@@ -3,6 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { StreakStrip } from './streak-strip.js'
 import type { SnapRow } from '../format.js'
 import { clientConfig, configure } from './config.js'
+import {
+  CHICAGO_TODAY, COUPLE_ZONE, EASTERN, EASTERN_TODAY, NOW as LATE_NOW, lateEveningTimes,
+} from '../../test/support/late-evening-couple.js'
+import { zoned } from '../zoned.js'
 
 const NAMES = { ana: 'Ana', ben: 'Ben' }
 const at = (d: number) => new Date(2026, 8, d, 12).toISOString()
@@ -51,4 +55,42 @@ describe('StreakStrip, household', () => {
     const { container } = render(<StreakStrip me="cy" names={{ ana: 'Ana', cy: 'Cy' }} shares={false} rows={[hrow('2026-10-01T18:00:00Z')]} />)
     expect(container).toBeEmptyDOMElement()
   }))
+})
+
+// The screenshot that started this: fifteen days running read as 15 / 1 / 0 because the phone
+// counted in its own zone. The suite runs with TZ=UTC, which for these rows reads the same way an
+// eastern phone does, so the strip given no zone IS the bug and the strip given the couple's zone
+// is the fix. Both are asserted, because a zone test that would pass with the prop ignored proves
+// nothing.
+describe('StreakStrip, counted in the zone the couple keeps', () => {
+  const rows = (): SnapRow[] => lateEveningTimes().map(({ by, createdAt }) => ({
+    id: createdAt + by, by, caption: '', kind: 'photo', thumbUrl: null, durationSec: null,
+    createdAt, witnessedAt: null, hidden: false,
+  }))
+  const pills = () => screen.getAllByRole('listitem').map((li) => li.textContent)
+
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(LATE_NOW) })
+  afterEach(() => vi.useRealTimers())
+
+  it('is rendered at an instant where the two zones disagree about the day, or it proves nothing', () => {
+    expect(zoned(LATE_NOW, COUPLE_ZONE).dayKey).toBe(CHICAGO_TODAY)
+    expect(zoned(LATE_NOW, EASTERN).dayKey).toBe(EASTERN_TODAY)
+    expect(zoned(LATE_NOW, COUPLE_ZONE).dayKey).not.toBe(zoned(LATE_NOW, EASTERN).dayKey)
+  })
+
+  it('shows fifteen, fifteen and fifteen when it is given the couple\'s zone', () => {
+    render(<StreakStrip rows={rows()} me="ana" names={NAMES} timeZone={COUPLE_ZONE} />)
+    expect(pills()).toEqual(['🔥15You', '🔥15Ben', '🔥15Together'])
+    expect(screen.getByText('You shared today. Ben did too.')).toBeInTheDocument()
+  })
+
+  it('reads a day in every zone in play when each of them keeps their own', () => {
+    render(<StreakStrip rows={rows()} me="ana" names={NAMES} timeZone={{ ana: COUPLE_ZONE, ben: EASTERN }} />)
+    expect(pills()).toEqual(['🔥15You', '🔥15Ben', '🔥15Together'])
+  })
+
+  it('is the bug with no zone: the phone\'s own day collapses his streak and theirs', () => {
+    render(<StreakStrip rows={rows()} me="ana" names={NAMES} />)
+    expect(pills()).toEqual(['🔥15You', '🔥1Ben', '0Together'])
+  })
 })

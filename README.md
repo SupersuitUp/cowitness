@@ -26,6 +26,10 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
 ## Three entry points
 
 - `@supersuit/cowitness`: the types and every rule, pure (`snapRow`, `streaksOf`, `cowitnessTile`, ...).
+  The streak counting itself is [`@supersuit/streak-steward`](https://www.npmjs.com/package/@supersuit/streak-steward),
+  re-exported from here (`streakOf`, `streaksOf`, `zonedStreakOf`, `zonedStreaksOf`, `captureStreak`,
+  `householdStreakOf`, and the day arithmetic `zoned`, `addDays`, `weekStart`, ...), so a day is counted
+  the same way here as in every other screen an app gives its people.
 - `@supersuit/cowitness/server`: `createCowitnessStore(host)` and `createCowitnessHandlers(host)`. Server only.
 - `@supersuit/cowitness/client`: `CowitnessProvider`, `CowitnessHome`, `SnapDetail`, `SnapsArchive`,
   `StreakStrip`, `AddSnap`, `WitnessSession`, and the recording pieces other screens may share.
@@ -284,6 +288,17 @@ it is.
   person who only witnesses is never offered the share sheet and is shown no household streak, and a
   person who only shares is not told what is waiting. `tagChoices` (from `store.tagChoices()`) is the
   list the share sheet tags from, and `languages` the languages a voice note's speaker may name.
+- **`CowitnessHome` and `StreakStrip` take `timeZone`: the zone the streak is counted in.** Pass it
+  whenever the day the streak is kept in is not the phone's own, which is every app whose people can
+  be in two zones. One named zone for everyone (`'America/Chicago'`), or the zone each of them keeps
+  (`{ ana: 'America/Chicago', ben: 'America/New_York' }`), and a day then counts in **every** zone in
+  play rather than only its owner's: a member's days are the union of those keys and a together day
+  is the intersection of the members' unions, so neither of them loses an evening they shared to a
+  line on a map. Left out, the strip counts the phone's own calendar day, as it always did. A phone
+  an hour east of the zone the streak is kept in then files an 11pm snap on the next day, opens a
+  gap on every day its owner shared only late, and shows that owner's streak and the together
+  streak as broken when neither is. The household streak (`streak: { kind: 'household' }`) has
+  always counted in its rule's own zone and ignores this prop.
 - `SnapDetail` and `SnapsArchive` take `tagLabels` (each tag id's label), and show a snap's tags
   only when it is given.
 - `AddSnap` takes `shares`: "just us" is offered only when it is true, because the server refuses

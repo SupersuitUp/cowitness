@@ -17,6 +17,8 @@ import type { SnapView } from '../types.js'
 import { memoryVault, type VaultStore } from './recording-vault.js'
 import { clientConfig, configure } from './config.js'
 import type { CowitnessFeatures } from '../features.js'
+import type { SnapRow } from '../format.js'
+import { COUPLE_ZONE, NOW as LATE_NOW, lateEveningTimes } from '../../test/support/late-evening-couple.js'
 
 const NAMES = { ana: 'Ana', ben: 'Ben' }
 const q = (id: string): SnapView => ({
@@ -152,4 +154,29 @@ describe('CowitnessHome with options', () => {
       expect(heldVoice).toHaveBeenCalledTimes(1)
     })
   })
+})
+
+// The zone the streak is counted in is the app's to say, so the home has to hand it to the strip.
+// Threading it is one prop and losing it is silent: the pills still draw, in the phone's day.
+describe('CowitnessHome, the zone the streak is counted in', () => {
+  const streakRows = (): SnapRow[] => lateEveningTimes().map(({ by, createdAt }) => ({
+    id: createdAt + by, by, caption: '', kind: 'photo', thumbUrl: null, durationSec: null,
+    createdAt, witnessedAt: null, hidden: false,
+  }))
+  const pills = () => screen.getAllByRole('listitem').map((li) => li.textContent)
+  const atLateEvening = (fn: () => void) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(LATE_NOW)
+    try { fn() } finally { vi.useRealTimers() }
+  }
+
+  it('hands it to the strip, which then counts the fifteen days they actually shared', () => atLateEvening(() => {
+    const { unmount } = render(
+      <CowitnessHome rows={[]} streak={streakRows()} witnessed={0} queue={[]} me="ana" names={NAMES} timeZone={COUPLE_ZONE} />)
+    expect(pills()).toEqual(['🔥15You', '🔥15Ben', '🔥15Together'])
+    unmount()
+    // No zone: the phone's own day, which is what every app that passes none still gets.
+    render(<CowitnessHome rows={[]} streak={streakRows()} witnessed={0} queue={[]} me="ana" names={NAMES} />)
+    expect(pills()).toEqual(['🔥15You', '🔥1Ben', '0Together'])
+  }))
 })
