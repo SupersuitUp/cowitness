@@ -7,6 +7,8 @@ vi.mock('./recording-vault.js', async (orig) => {
 })
 import { VoiceNote } from './voice-note.js'
 import { memoryVault, type VaultStore } from './recording-vault.js'
+import { REACTION_MAX_SEC, validateReactionClip } from '../snap-rules.js'
+import { RECORD_MAX_SEC } from './recorder.js'
 
 // A recorder as the spec has it: when every track it records has ended, it stops on its own and
 // hands over what it had, so a page that only stops the tracks still gets an onstop.
@@ -23,6 +25,36 @@ class FakeRecorder {
 }
 
 describe('VoiceNote', () => {
+  describe('recording limits', () => {
+    afterEach(() => { vi.useRealTimers(); vault = null; live = null })
+
+    it.each([
+      { name: 'a reaction', maxSec: REACTION_MAX_SEC, expected: REACTION_MAX_SEC },
+      { name: 'a voice snap by default', maxSec: undefined, expected: RECORD_MAX_SEC },
+    ])('stops $name at its accepted duration and releases the microphone', async ({ maxSec, expected }) => {
+      vi.useFakeTimers()
+      vi.stubGlobal('MediaRecorder', FakeRecorder)
+      const track = { stop: vi.fn() }
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [track] })) } })
+      vault = memoryVault()
+      const onRecorded = vi.fn()
+      render(<VoiceNote maxSec={maxSec} onRecorded={onRecorded} />)
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Record' })) })
+      vi.setSystemTime(Date.now() + (expected - 0.5) * 1000)
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(onRecorded).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(onRecorded).toHaveBeenCalledTimes(1)
+      const recorded = onRecorded.mock.calls[0][0]
+      expect(recorded.durationSec).toBe(expected)
+      expect(track.stop).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('button', { name: 'Record' })).toBeInTheDocument()
+      if (maxSec === REACTION_MAX_SEC) {
+        expect(() => validateReactionClip({ contentType: recorded.blob.type, size: recorded.blob.size, durationSec: recorded.durationSec })).not.toThrow()
+      }
+    })
+  })
+
   it('records on one tap, stops on the next, and hands back the recording with its held id', async () => {
     vi.stubGlobal('MediaRecorder', FakeRecorder)
     const track = { stop: vi.fn() }

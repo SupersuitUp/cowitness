@@ -377,14 +377,16 @@ it is.
   only when it is given.
 - `AddSnap` takes `shares`: "just us" is offered only when it is true, because the server refuses
   it from anyone else. It defaults to false; `CowitnessHome` passes `can.share`.
-- `VoiceMedia` plays a voice snap with its words under it. Pass `me`, the person looking, so "Try
+- `VoiceMedia` shows a voice snap's words above its compact player. Pass `me`, the person looking, so "Try
   again" is offered exactly where the server allows it (see the voice transcription rule above);
   without `me` it is offered only for a failed or stalled run. `SnapDetail` and `WitnessSession`
   use it already.
 - `VoiceNote` is the record button: tap to record, tap to stop, every second kept in the phone's
   vault as it is made. `onRecorded({ blob, durationSec, id })` is handed the note; `onCancel` is
   optional, and Cancel is drawn only when it is given. `vaultKey` names what the note is held as (a
-  voice snap by default).
+  voice snap by default). `maxSec` sets its automatic stop in seconds (20 minutes by default).
+  A spoken reply uses `maxSec={REACTION_MAX_SEC}` so its recording fits the reaction endpoint's
+  three-minute limit.
 - `sendVoiceSnap` sends a held voice note as a snap, under its own id, so a retry files the same
   snap. `sendHeldVoiceSnaps(vault, send?, onDropped?)` resends what is still held; a note the server
   refuses for good (a 4xx other than 408 or 429) is let go and `onDropped({ id, caption, status })`
@@ -392,7 +394,7 @@ it is.
 - `CaptureReminders` edits a person's own reminder times and "not today" against `<api>/prompts`.
   Its `initial` is `store.promptSettings(me)`, and its children are drawn inside it: put the app's
   own notification switch there, since a reminder is only as good as the permission to show it.
-- `sendReaction(snapId, blob, durationSec, commentId)` files a spoken reply under a snap, for an
+- `sendReaction(snapId, blob, durationSec, commentId, member?)` files a spoken reply under a snap, for an
   app whose own conversation (`renderThread`) records spoken replies.
 
 ### Why an iPhone asks for permission every time
