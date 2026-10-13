@@ -31,6 +31,11 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
   `householdStreakOf`, and the day arithmetic `zoned`, `addDays`, `weekStart`, ...), so a day is counted
   the same way here as in every other screen an app gives its people.
 - `@supersuit/cowitness/server`: `createCowitnessStore(host)` and `createCowitnessHandlers(host)`. Server only.
+- `@supersuit/cowitness/camera`: `SnapCamera`, `openStream`, `askForMotion`. The two-shot capture
+  layer alone (selfie, then the back camera, an optional screenshot, one composed jpeg to
+  `onCapture`), from an entry that reaches nothing but React, for an app that is not a Next.js
+  app. The opening tap calls `askForMotion()` and `openStream('user')` and passes the promise as
+  `stream`. Its classes are Tailwind's, so point the app's Tailwind at this package's `dist/`.
 - `@supersuit/cowitness/client`: `CowitnessProvider`, `CowitnessHome`, `SnapDetail`, `SnapsArchive`,
   `StreakStrip`, `AddSnap`, `WitnessSession`, and the recording pieces other screens may share.
 
