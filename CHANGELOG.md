@@ -2,6 +2,14 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.3 (2026-10-13)
+
+- **`@supersuit/cowitness/camera`: the two-shot capture layer on its own.** `SnapCamera`,
+  `openStream` and `askForMotion`, from an entry that reaches nothing but React, so an app that
+  is not a Next.js app (or mounts none of Cowitness's screens) can take the same photo: the
+  selfie first, then the back camera, an optional screenshot, one composed jpeg handed to
+  `onCapture`. `/client` is unchanged.
+
 ## 0.3.2 (2026-10-12)
 
 - `VoiceNote` accepts `maxSec` so a custom conversation can stop a spoken reaction at the same three-minute limit the server accepts. Voice snaps retain their default twenty-minute limit.
