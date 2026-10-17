@@ -2,6 +2,12 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.4 (2026-10-17)
+
+- A video with no poster frame draws its stand-in tile when the app's ink is a CSS variable (a theme
+  that follows the phone's light and dark). It appended hex alpha digits to the ink, which made
+  `var(--ink)e6`, not a colour, so the tile had no background. A hex ink draws exactly what it did.
+
 ## 0.3.3 (2026-10-13)
 
 - **`@supersuit/cowitness/camera`: the two-shot capture layer on its own.** `SnapCamera`,
