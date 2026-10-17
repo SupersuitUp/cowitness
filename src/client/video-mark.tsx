@@ -1,9 +1,12 @@
 import { formatDuration } from './format-duration.js'
 import { INK } from './theme.js'
 
-// INK at 90%: the tile a video shows when there is no poster frame to draw.
+// INK at 90%: the tile a video shows when there is no poster frame to draw. A hex ink keeps the
+// hex-alpha form it always had (the options-off golden holds it to 0.1.3); any other ink, such as a
+// CSS variable for a theme that follows the phone's light and dark, goes through color-mix, because
+// hex digits appended to "var(--ink)" are not a colour and the tile drew no background at all.
 // A function, because INK is the app's and is only known once the app has set it.
-export const noPosterBg = () => `${INK}e6`
+export const noPosterBg = () => (/^#[0-9a-fA-F]{6}$/.test(INK) ? `${INK}e6` : `color-mix(in srgb, ${INK} 90%, transparent)`)
 
 /** The dark stand-in for a video with no poster. Fills its (relative) parent. */
 export function NoPoster() {
