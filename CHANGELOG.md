@@ -2,7 +2,7 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
-## Unreleased
+## 0.3.5 (2026-10-18)
 
 - A video in a witness session carries the phone's own controls, so it can be paused and seeked
   while catching up, as it already could on a snap's own page. It used to play once with no way
