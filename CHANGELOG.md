@@ -2,6 +2,12 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## Unreleased
+
+- A video in a witness session carries the phone's own controls, so it can be paused and seeked
+  while catching up, as it already could on a snap's own page. It used to play once with no way
+  back. A scrub is a sideways drag, so it never reads as the swipe up that means Next.
+
 ## 0.3.4 (2026-10-17)
 
 - A video with no poster frame draws its stand-in tile when the app's ink is a CSS variable (a theme

@@ -426,6 +426,8 @@ const worthKeeping = (elapsedMs: number, heard: SpeechTally) =>
 
 // Plays once, inline, with sound. The tap that opened the session (or the Next that led here)
 // is the gesture a phone wants before it plays sound; if it still refuses, a tap plays it.
+// It carries the phone's own controls, so a witness can pause and seek back as on a snap's own
+// page; a scrub is a sideways drag, so it never reads as the swipe up that means Next.
 function WitnessVideo({ snap, label }: { snap: SnapView; label: string }) {
   const ref = useRef<HTMLVideoElement>(null)
   const [blocked, setBlocked] = useState(false)
@@ -440,7 +442,7 @@ function WitnessVideo({ snap, label }: { snap: SnapView; label: string }) {
     <div className="relative flex max-h-full max-w-full items-center justify-center">
       <video
         ref={ref} src={snap.videoUrl} poster={snap.posterUrl ?? undefined} aria-label={label}
-        playsInline preload="auto" className="max-h-full max-w-full"
+        playsInline controls preload="auto" className="max-h-full max-w-full"
         style={{ backgroundColor: snap.posterUrl ? undefined : noPosterBg() }}
       />
       {blocked && (

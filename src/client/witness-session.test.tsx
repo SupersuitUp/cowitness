@@ -145,6 +145,11 @@ describe('WitnessSession, typing only', () => {
     expect(v.loop).toBe(false)
     expect(v.muted).toBe(false)
   })
+
+  it('a video can be paused and seeked while catching up', () => {
+    const { container } = render(<WitnessSession me="ana" names={NAMES} onClose={() => {}} queue={[snap('v', { kind: 'video', videoUrl: 'https://v/1', posterUrl: 'https://p/1' })]} />)
+    expect(container.querySelector('video')).toHaveAttribute('controls')
+  })
 })
 
 class FakeMediaRecorder {
