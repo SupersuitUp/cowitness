@@ -61,6 +61,31 @@ export async function applyHardwareZoom(track: MediaStreamTrack | undefined, zoo
   }
 }
 
+// The camera's zoom, as a pinch drives it. A pinch fires dozens of touchmoves a second, and asking the camera for
+// each one queues reconfigurations faster than iOS performs them, which froze the whole page mid-pinch. So one
+// request is in flight at a time, and while it is, only the newest zoom waits to go next; the rest are dropped.
+export function hardwareZoomer(track: () => MediaStreamTrack | undefined): { set(zoom: number): void } {
+  let busy = false
+  let next: number | null = null
+  const run = async (zoom: number) => {
+    busy = true
+    try {
+      await applyHardwareZoom(track(), zoom)
+    } finally {
+      busy = false
+      const queued = next
+      next = null
+      if (queued !== null) void run(queued)
+    }
+  }
+  return {
+    set(zoom) {
+      if (busy) { next = zoom; return }
+      void run(zoom)
+    },
+  }
+}
+
 // The middle 1/zoom of a frame, which is exactly what a preview scaled by `zoom` from its centre
 // showed. The original frame is released, so a cropped snap holds one canvas, not two.
 export function cropFrame(frame: Frame, zoom: number): Frame {
