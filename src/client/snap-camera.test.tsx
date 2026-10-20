@@ -316,6 +316,32 @@ describe('SnapCamera zoom', () => {
     expect(document.querySelector('video')?.style.transform).toBe('scale(3)')
   })
 
+  // A pinch on the camera must never become a pinch of the page: iOS ignores touch-action that is switched on
+  // mid-gesture and React's touch handlers are passive, so the view refuses the page's own pinch natively.
+  it('refuses the page its own pinch over the camera, from the first finger', async () => {
+    await open()
+    const view = document.querySelector('video')!.parentElement!
+    expect(view.style.touchAction).toBe('none')
+    expect(fireEvent.touchMove(view, twoFingers(150))).toBe(false)
+    expect(fireEvent(view, new Event('gesturestart', { cancelable: true }))).toBe(false)
+    expect(fireEvent(view, new Event('gesturechange', { cancelable: true }))).toBe(false)
+  })
+
+  it('sends a pinch to the camera one request at a time, ending on where the fingers stopped', async () => {
+    const pending: Array<() => void> = []
+    const track = { ...zoomingTrack(), applyConstraints: vi.fn(() => new Promise<void>((r) => pending.push(r))) }
+    vi.mocked(openStream).mockResolvedValueOnce({ getTracks: () => [track], getVideoTracks: () => [track] } as unknown as MediaStream)
+    await toBack()
+    const view = document.querySelector('video')!.parentElement!
+    fireEvent.touchStart(view, twoFingers(100))
+    for (const gap of [110, 120, 130, 140, 150]) fireEvent.touchMove(view, twoFingers(gap))
+    expect(track.applyConstraints).toHaveBeenCalledTimes(1)
+    pending.shift()!()
+    await waitFor(() => expect(track.applyConstraints).toHaveBeenCalledTimes(2))
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ advanced: [{ zoom: 3 }] })
+    pending.shift()!()
+  })
+
   it('starts the next snap at 1× after Retake', async () => {
     await toBack()
     await press('Zoom 3×')

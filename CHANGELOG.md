@@ -2,6 +2,13 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.8 (2026-10-20)
+
+- A pinch on the back camera in `SnapCamera` no longer freezes the page. The camera is asked for one
+  zoom at a time, the newest waiting, instead of once per touchmove; and the camera view refuses the
+  page its own pinch from the first finger (`touch-action: none` plus a native listener on
+  `touchmove`, `gesturestart` and `gesturechange`), so Safari never zooms the page under the camera.
+
 ## 0.3.7 (2026-10-20)
 
 - 0.3.6 was tagged and never published: a test read the real clock and its dates had aged out of

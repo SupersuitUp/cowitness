@@ -6,7 +6,7 @@ import { useHistoryLayer } from './history-layer.js'
 import { browserCamera, frameThumb, grabAndClose, openStream, playing, type Camera, type Frame } from './dual-camera.js'
 import { quarterTurnsFrom, readTilt, screenAngle, turnFrame } from './upright.js'
 import { drawCameras, drawWithScreen, encodeSnap, frameFrom, freeCanvas, previewUrl, snapFile } from './snap-compose.js'
-import { applyHardwareZoom, clamp, cropFrame, pinchZoom, zoomLabel, zoomRange, zoomSteps, type ZoomRange } from './zoom.js'
+import { clamp, cropFrame, hardwareZoomer, pinchZoom, zoomLabel, zoomRange, zoomSteps, type ZoomRange } from './zoom.js'
 
 interface Props {
   /** The front camera, asked for inside the tap: a phone grants one only there. */
@@ -60,6 +60,23 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
   const [range, setRange] = useState<ZoomRange | null>(null)
   const [zoom, setZoom] = useState(1)
   const pinch = useRef<{ zoom: number; distance: number } | null>(null)
+  const cameraZoom = useRef(hardwareZoomer(() => cam.current?.stream.getVideoTracks?.()[0]))
+  // The camera view refuses the PAGE its pinch, natively and from the first finger: React's touch handlers are
+  // passive, so they cannot stop it, and iOS ignores a touch-action switched on once a gesture has begun. A page
+  // pinch-zoomed under this full-screen layer is what left the whole app stuck.
+  const view = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = view.current
+    if (!el) return
+    // `touches` read off the event, never `instanceof TouchEvent`: a browser with no touch support has no such global.
+    const stop = (e: Event) => {
+      const touches = (e as { touches?: { length: number } }).touches
+      if (!touches || touches.length > 1) e.preventDefault()
+    }
+    const kinds = ['touchmove', 'gesturestart', 'gesturechange'] as const
+    for (const k of kinds) el.addEventListener(k, stop, { passive: false })
+    return () => { for (const k of kinds) el.removeEventListener(k, stop) }
+  }, [])
 
   const release = useCallback(() => {
     if (cam.current) browserCamera.close(cam.current)
@@ -191,7 +208,7 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
     if (!range) return
     const z = clamp(next, range)
     setZoom(z)
-    if (range.hardware) void applyHardwareZoom(cam.current?.stream.getVideoTracks?.()[0], z)
+    if (range.hardware) cameraZoom.current.set(z)
   }
 
   const spread = (touches: TouchList) =>
@@ -232,8 +249,9 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
       </div>
 
       <div
+        ref={view}
         className="relative min-h-0 flex-1 overflow-hidden"
-        style={zooming ? { touchAction: 'none' } : undefined}
+        style={{ touchAction: 'none' }}
         onTouchStart={pinchStart}
         onTouchMove={pinchMove}
         onTouchEnd={pinchEnd}

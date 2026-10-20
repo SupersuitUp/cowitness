@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DIGITAL_MAX, applyHardwareZoom, cropFrame, pinchZoom, zoomLabel, zoomRange, zoomSteps } from './zoom.js'
+import { DIGITAL_MAX, applyHardwareZoom, cropFrame, hardwareZoomer, pinchZoom, zoomLabel, zoomRange, zoomSteps } from './zoom.js'
 
 const aTrack = (zoom?: { min: number; max: number }, current?: number) => ({
   getCapabilities: () => (zoom ? { zoom } : {}),
@@ -76,5 +76,33 @@ describe('cropFrame', () => {
     const frame = { image: 'f' as unknown as CanvasImageSource, width: 4, height: 3, release: vi.fn() }
     expect(cropFrame(frame, 1)).toBe(frame)
     expect(frame.release).not.toHaveBeenCalled()
+  })
+})
+
+describe('hardwareZoomer', () => {
+  // A pinch fires dozens of touchmoves a second. Asking the camera for each one queues reconfigurations faster
+  // than iOS performs them and freezes the page, so one request is in flight at a time and only the newest waits.
+  it('keeps one request in flight and sends only the newest zoom after it', async () => {
+    const pending: Array<() => void> = []
+    const track = { applyConstraints: vi.fn(() => new Promise<void>((r) => pending.push(r))) } as unknown as MediaStreamTrack
+    const zoomer = hardwareZoomer(() => track)
+    for (const z of [1.1, 1.2, 1.3, 1.4, 1.5]) zoomer.set(z)
+    expect(track.applyConstraints).toHaveBeenCalledTimes(1)
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ advanced: [{ zoom: 1.1 }] })
+    pending.shift()!()
+    await vi.waitFor(() => expect(track.applyConstraints).toHaveBeenCalledTimes(2))
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ advanced: [{ zoom: 1.5 }] })
+    pending.shift()!()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(track.applyConstraints).toHaveBeenCalledTimes(2)
+  })
+
+  it('carries on after a refusal, and does nothing with no track', async () => {
+    const track = { applyConstraints: vi.fn().mockRejectedValueOnce(new Error('no')).mockResolvedValue(undefined) } as unknown as MediaStreamTrack
+    const zoomer = hardwareZoomer(() => track)
+    zoomer.set(2)
+    zoomer.set(3)
+    await vi.waitFor(() => expect(track.applyConstraints).toHaveBeenLastCalledWith({ advanced: [{ zoom: 3 }] }))
+    expect(() => hardwareZoomer(() => undefined).set(2)).not.toThrow()
   })
 })
