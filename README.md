@@ -36,6 +36,9 @@ Tailwind 4, add to the stylesheet that imports Tailwind:
   `onCapture`), from an entry that reaches nothing but React, for an app that is not a Next.js
   app. The opening tap calls `askForMotion()` and `openStream('user')` and passes the promise as
   `stream`. Its classes are Tailwind's, so point the app's Tailwind at this package's `dist/`.
+  The back camera zooms by pinch or by the step buttons under the preview: on the camera itself
+  where the phone reports a zoom capability, otherwise digitally (up to 3×, cropped at the shutter
+  to exactly what was framed). The selfie is never zoomed.
 - `@supersuit/cowitness/client`: `CowitnessProvider`, `CowitnessHome`, `SnapDetail`, `SnapsArchive`,
   `StreakStrip`, `AddSnap`, `WitnessSession`, and the recording pieces other screens may share.
 

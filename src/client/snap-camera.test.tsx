@@ -21,7 +21,13 @@ vi.mock('./upright.js', async (orig) => ({
   turnFrame: vi.fn((f: unknown, turns: number) => ({ ...(f as object), turned: turns })),
 }))
 
+vi.mock('./zoom.js', async (orig) => ({
+  ...(await orig<typeof import('./zoom.js')>()),
+  cropFrame: vi.fn((f: object, zoom: number) => (zoom > 1 ? { ...f, cropped: zoom } : f)),
+}))
+
 import { SnapCamera } from './snap-camera.js'
+import { cropFrame } from './zoom.js'
 import { readTilt, screenAngle, turnFrame } from './upright.js'
 import { browserCamera, frameThumb, grabAndClose, openStream } from './dual-camera.js'
 import { drawCameras, drawWithScreen, encodeSnap, frameFrom, freeCanvas, previewUrl, snapFile } from './snap-compose.js'
@@ -241,5 +247,83 @@ describe('SnapCamera', () => {
     await press('Take the snap')
     expect(screen.getByText('Screenshot')).toHaveAttribute('aria-current', 'step')
     expect(screen.getByText('Selfie')).not.toHaveAttribute('aria-current')
+  })
+})
+
+describe('SnapCamera zoom', () => {
+  // A back camera that zooms itself, opening at 2 the way a multi-lens iPhone does.
+  const zoomingTrack = () => ({
+    stop: vi.fn(),
+    getCapabilities: () => ({ zoom: { min: 1, max: 10 } }),
+    getSettings: () => ({ zoom: 2 }),
+    applyConstraints: vi.fn(async () => {}),
+  })
+  const toBack = async () => {
+    await open()
+    await press('Take the selfie')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Take the snap' })).not.toBeDisabled())
+  }
+  const twoFingers = (gap: number) => ({ touches: [{ clientX: 0, clientY: 0 }, { clientX: gap, clientY: 0 }] })
+
+  it('is offered for the back camera only, never the selfie', async () => {
+    await open()
+    expect(screen.queryByRole('group', { name: 'Zoom' })).toBeNull()
+    await press('Take the selfie')
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Zoom' })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Zoom 1×' })).toHaveAttribute('aria-pressed', 'true')
+    await press('Take the snap')
+    expect(screen.queryByRole('group', { name: 'Zoom' })).toBeNull()
+  })
+
+  it('zooms digitally on a camera that cannot: the preview scales and the shot is cropped to match', async () => {
+    vi.mocked(cropFrame).mockClear()
+    await toBack()
+    await press('Zoom 2×')
+    expect(document.querySelector('video')?.style.transform).toBe('scale(2)')
+    expect(screen.getByRole('button', { name: 'Zoom 2×' })).toHaveAttribute('aria-pressed', 'true')
+    await press('Take the snap')
+    expect(cropFrame).toHaveBeenCalledWith(expect.anything(), 2)
+    const shot = vi.mocked(drawCameras).mock.calls.at(-1)![0] as unknown as { back: { cropped?: number }; front: { cropped?: number } }
+    expect(shot.back.cropped).toBe(2)
+    expect(shot.front.cropped).toBeUndefined()
+  })
+
+  it('asks the camera itself to zoom when it can, counting from the view it opened at', async () => {
+    const track = zoomingTrack()
+    vi.mocked(openStream).mockResolvedValueOnce({ getTracks: () => [track], getVideoTracks: () => [track] } as unknown as MediaStream)
+    vi.mocked(cropFrame).mockClear()
+    await toBack()
+    expect(screen.getByRole('button', { name: 'Zoom 0.5×' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Zoom 5×' })).toBeInTheDocument()
+    await press('Zoom 2×')
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ advanced: [{ zoom: 4 }] })
+    expect(document.querySelector('video')?.style.transform).toBe('')
+    await press('Take the snap')
+    expect(cropFrame).not.toHaveBeenCalled()
+  })
+
+  it('follows a pinch, held inside what the camera can do', async () => {
+    await toBack()
+    const view = document.querySelector('video')!.parentElement!
+    fireEvent.touchStart(view, twoFingers(100))
+    fireEvent.touchMove(view, twoFingers(150))
+    expect(document.querySelector('video')?.style.transform).toBe('scale(1.5)')
+    expect(screen.getByText('1.5×')).toBeInTheDocument()
+    fireEvent.touchMove(view, twoFingers(1000))
+    expect(document.querySelector('video')?.style.transform).toBe('scale(3)')
+    fireEvent.touchEnd(view, { touches: [] })
+    fireEvent.touchMove(view, twoFingers(100))
+    expect(document.querySelector('video')?.style.transform).toBe('scale(3)')
+  })
+
+  it('starts the next snap at 1× after Retake', async () => {
+    await toBack()
+    await press('Zoom 3×')
+    await press('Take the snap')
+    await press('Retake')
+    await waitFor(() => screen.getByRole('button', { name: 'Take the selfie' }))
+    await press('Take the selfie')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zoom 1×' })).toHaveAttribute('aria-pressed', 'true'))
+    expect(document.querySelector('video')?.style.transform).toBe('')
   })
 })
