@@ -76,9 +76,11 @@ describe('the recording vault', () => {
     await record(store, { noteId: 'n1', now: '2026-09-20T10:00:00.000Z' })
     await record(store, { noteId: 'n1', now: '2026-09-22T10:00:00.000Z' })
     await record(store, { noteId: 'n2', now: '2026-09-23T10:00:00.000Z' })
-    const mine = await recoverable(store, 'n1')
+    // A fixed clock: these dates age out of the keep window, and the real clock would drop them.
+    const now = new Date('2026-09-24T00:00:00.000Z')
+    const mine = await recoverable(store, 'n1', { now })
     expect(mine.map((r) => r.createdAt)).toEqual(['2026-09-22T10:00:00.000Z', '2026-09-20T10:00:00.000Z'])
-    expect(await recoverable(store, 'n2')).toHaveLength(1)
+    expect(await recoverable(store, 'n2', { now })).toHaveLength(1)
   })
 
   it('forgets a recording once it is safely filed, and a late chunk does not resurrect it', async () => {

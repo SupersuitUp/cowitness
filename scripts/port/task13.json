@@ -447,6 +447,7 @@
     }
   ],
   "diverged": [
+    "src/client/recording-vault.test.ts",
     "src/client/recording-vault.ts",
     "src/client/snap-upload.ts",
     "src/client/dual-camera.ts",

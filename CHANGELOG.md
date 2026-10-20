@@ -2,7 +2,10 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
-## 0.3.6 (2026-10-20)
+## 0.3.7 (2026-10-20)
+
+- 0.3.6 was tagged and never published: a test read the real clock and its dates had aged out of
+  the keep window. The test now runs on a fixed date; the package is unchanged.
 
 - The back camera in `SnapCamera` zooms: pinch the preview, or tap the step buttons under it
   (1×, 2×, 3×, plus 0.5× and 5× where the lens reaches them). A phone that reports a zoom

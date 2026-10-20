@@ -341,6 +341,7 @@
     }
   ],
   "diverged": [
+    "src/client/video-mark.tsx",
     "src/client/add-snap.tsx",
     "src/client/add-snap.test.tsx",
     "src/client/cowitness-home.tsx",
