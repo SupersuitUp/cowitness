@@ -2,6 +2,14 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.6 (2026-10-20)
+
+- The back camera in `SnapCamera` zooms: pinch the preview, or tap the step buttons under it
+  (1×, 2×, 3×, plus 0.5× and 5× where the lens reaches them). A phone that reports a zoom
+  capability zooms the camera itself; any other is zoomed digitally, up to 3×, and the shot is
+  cropped to exactly the middle that was framed. Labels count from the view the camera opened
+  at, so 1× is always what was first shown. The selfie is never zoomed, and Retake starts at 1×.
+
 ## 0.3.5 (2026-10-18)
 
 - A video in a witness session carries the phone's own controls, so it can be paused and seeked

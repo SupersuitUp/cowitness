@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type TouchEvent, type TouchList } from 'react'
 import { cameraFailure, type CameraFailure } from './camera-failure.js'
 import { useHistoryLayer } from './history-layer.js'
 import { browserCamera, frameThumb, grabAndClose, openStream, playing, type Camera, type Frame } from './dual-camera.js'
 import { quarterTurnsFrom, readTilt, screenAngle, turnFrame } from './upright.js'
 import { drawCameras, drawWithScreen, encodeSnap, frameFrom, freeCanvas, previewUrl, snapFile } from './snap-compose.js'
+import { applyHardwareZoom, clamp, cropFrame, pinchZoom, zoomLabel, zoomRange, zoomSteps, type ZoomRange } from './zoom.js'
 
 interface Props {
   /** The front camera, asked for inside the tap: a phone grants one only there. */
@@ -55,6 +56,10 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
   // Why the camera would not open, kept so the screen can say it instead of a bare "No camera".
   const [failure, setFailure] = useState<CameraFailure | null>(null)
   const picker = useRef<HTMLInputElement>(null)
+  // The back camera's zoom. Null until the back camera is live: the selfie is never zoomed.
+  const [range, setRange] = useState<ZoomRange | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const pinch = useRef<{ zoom: number; distance: number } | null>(null)
 
   const release = useCallback(() => {
     if (cam.current) browserCamera.close(cam.current)
@@ -67,11 +72,16 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
 
   // A stream onto the element on screen. The element belongs to this component rather than to the
   // camera, so React keeps rendering the preview and only the stream underneath is swapped.
-  const attach = useCallback((opening: Promise<MediaStream>) => {
+  const attach = useCallback((opening: Promise<MediaStream>, zoomable = false) => {
     let wanted = true
     void opening.then((ms) => {
       if (!wanted || !video.current) { ms.getTracks().forEach((t) => t.stop()); return }
       cam.current = playing(ms, video.current)
+      if (zoomable) {
+        const r = zoomRange(ms.getVideoTracks?.()[0])
+        setRange(r)
+        setZoom(r.base)
+      }
       setBusy(false)
     }).catch((err: unknown) => {
       if (!wanted) return
@@ -98,20 +108,24 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
       // Turned upright by how the phone was held at the shutter, unless the page turned with it,
       // in which case iOS has already turned the camera stream too (upright.ts says why).
       const facing = stage === 'selfie' ? 'user' : 'environment'
-      const frame = turnFrame(await grabAndClose(browserCamera, live), quarterTurnsFrom(readTilt(), facing, screenAngle()))
+      // A digital zoom is cropped here, before the turn: the crop is the middle, whichever way up.
+      const grabbed = await grabAndClose(browserCamera, live)
+      const framed = range && !range.hardware && stage === 'back' ? cropFrame(grabbed, zoom) : grabbed
+      const frame = turnFrame(framed, quarterTurnsFrom(readTilt(), facing, screenAngle()))
       cam.current = null
       if (stage === 'selfie') {
         selfie.current = frame
         setThumb(frameThumb(frame))
         setSelfieWide(frame.width > frame.height)
         setStage('back')
-        attach(openStream('environment'))
+        attach(openStream('environment'), true)
         return
       }
       // drawCameras releases both frames, so the selfie is spent by the time this returns.
       composed.current = drawCameras({ back: frame, front: selfie.current })
       selfie.current = null
       setPreview(previewUrl(composed.current))
+      setRange(null)
       setStage('ready')
       // Nothing is opening and nothing is being taken: the choices below are live again.
       setBusy(false)
@@ -160,6 +174,8 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
     setThumb(null)
     setScreened(false)
     setFailure(null)
+    setRange(null)
+    setZoom(1)
     setStage('selfie')
     setBusy(true)
     release()
@@ -168,6 +184,30 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
 
   const framing = stage === 'selfie' || stage === 'back'
   const mirrored = stage === 'selfie'
+  // Zoom is offered only while the back camera is live and nothing is being taken.
+  const zooming = stage === 'back' && range !== null && !busy
+
+  const zoomTo = (next: number) => {
+    if (!range) return
+    const z = clamp(next, range)
+    setZoom(z)
+    if (range.hardware) void applyHardwareZoom(cam.current?.stream.getVideoTracks?.()[0], z)
+  }
+
+  const spread = (touches: TouchList) =>
+    Math.hypot(touches[0]!.clientX - touches[1]!.clientX, touches[0]!.clientY - touches[1]!.clientY)
+  const pinchStart = (e: TouchEvent) => {
+    if (!zooming || e.touches.length !== 2) return
+    pinch.current = { zoom, distance: spread(e.touches) }
+  }
+  const pinchMove = (e: TouchEvent) => {
+    const from = pinch.current
+    if (!from || !range || e.touches.length !== 2) return
+    zoomTo(pinchZoom(from.zoom, from.distance, spread(e.touches), range))
+  }
+  const pinchEnd = (e: TouchEvent) => { if (e.touches.length < 2) pinch.current = null }
+  // A digital zoom is the preview scaled from its centre, the same middle cropFrame keeps.
+  const digitalScale = range && !range.hardware && stage === 'back' && zoom > 1 ? `scale(${zoom})` : undefined
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Take a snap" className="fixed inset-0 z-[70] flex flex-col bg-black text-white">
@@ -191,13 +231,21 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
         <span aria-live="polite" className="ml-2 truncate text-sm opacity-80">{trouble}</span>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div
+        className="relative min-h-0 flex-1 overflow-hidden"
+        style={zooming ? { touchAction: 'none' } : undefined}
+        onTouchStart={pinchStart}
+        onTouchMove={pinchMove}
+        onTouchEnd={pinchEnd}
+        onTouchCancel={pinchEnd}
+      >
         <video
           ref={video}
           hidden={!!preview}
           playsInline
           muted
           className={`h-full w-full object-cover${mirrored ? ' -scale-x-100' : ''}`}
+          style={digitalScale ? { transform: digitalScale } : undefined}
         />
         {/* contain, not cover: a landscape snap is shown whole rather than cropped back to portrait. */}
         {preview && <img src={preview} alt="The snap you just took" className="h-full w-full object-contain" />}
@@ -208,6 +256,31 @@ export function SnapCamera({ stream, onCapture, onClose, onPickInstead }: Props)
             className={`absolute left-[4%] top-[4%] ${selfieWide ? 'w-[37%]' : 'w-[28%]'} -scale-x-100 rounded-xl border-2 border-white/80 object-cover`}
             style={{ aspectRatio: selfieWide ? '4 / 3' : '3 / 4' }}
           />
+        )}
+        {zooming && range && (
+          <div role="group" aria-label="Zoom" className="absolute inset-x-0 bottom-3 flex justify-center">
+            <div className="flex items-center gap-1 rounded-full bg-black/50 p-1">
+              {zoomSteps(range).map((step) => {
+                const at = range.base * step
+                const on = Math.abs(zoom - at) < 0.05 * range.base
+                // The pressed button carries the live zoom mid-pinch, so the number on screen is the true one.
+                const nearest = zoomSteps(range).reduce((a, b) => (Math.abs(range.base * b - zoom) < Math.abs(range.base * a - zoom) ? b : a))
+                const text = !on && step === nearest ? `${zoomLabel(zoom, range)}×` : `${zoomLabel(at, range)}×`
+                return (
+                  <button
+                    key={step}
+                    type="button"
+                    aria-label={`Zoom ${zoomLabel(at, range)}×`}
+                    aria-pressed={on}
+                    onClick={() => zoomTo(at)}
+                    className={`h-9 min-w-9 rounded-full px-2 text-[13px] font-medium ${on ? 'bg-white text-black' : 'text-white'}`}
+                  >
+                    {text}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         )}
         {stage === 'nocamera' && (
           <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
