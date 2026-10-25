@@ -10,6 +10,7 @@ import { noPosterBg } from './video-mark.js'
 import { HAIRLINE, INK, MUTED, SERIF } from './theme.js'
 import { otherIn } from './people.js'
 import { VoiceMedia } from './voice-media.js'
+import { witnessPatch, witnessesOnOpen } from './witness-flow.js'
 
 // The optimistic transcribing recording carries none of a previous attempt's leftovers: an old
 // reason would be meaningless once it is transcribing again, and an old startedAt would make it
@@ -34,6 +35,18 @@ export function SnapDetail({ snap, me, names, tagLabels }: { snap: SnapView; me:
   const hidden = snap.hiddenAt !== null
   const [when, setWhen] = useState('')
   useEffect(() => { setWhen(formatWhen(snap.createdAt)) }, [snap.createdAt])
+
+  // Seeing it here is seeing it: witnessed once on open, quietly, so the person who shared it is
+  // never left thinking it went unseen because it was opened outside a witness session. The ref
+  // keeps a re-render (or React's double effect in development) from sending it twice.
+  const witnessedOnOpen = useRef(false)
+  useEffect(() => {
+    if (witnessedOnOpen.current || !witnessesOnOpen(snap, me)) return
+    witnessedOnOpen.current = true
+    void fetch(`${clientConfig().apiBase}/${snap.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(witnessPatch('')),
+    }).catch(() => null)
+  }, [snap, me])
 
   const POLL_MS = 4000
   const POLL_MAX_MS = 5 * 60 * 1000

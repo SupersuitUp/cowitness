@@ -2,6 +2,15 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.9 (2026-10-24)
+
+- Opening someone else's snap on its own page (`SnapDetail`) now counts as seeing it: the snap is
+  witnessed once, silently, the same way a Next with nothing said is, and the person who shared it
+  is told. Before this only a witness session recorded a seen, so a snap opened anywhere else stayed
+  "unseen" to its author. Never sent for one's own snap, a hidden one, or one already seen by this
+  person; where each witness has their own seen, only theirs is read. New pure rule:
+  `witnessesOnOpen` in `witness-flow`.
+
 ## 0.3.8 (2026-10-20)
 
 - A pinch on the back camera in `SnapCamera` no longer freezes the page. The camera is asked for one

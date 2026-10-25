@@ -12,6 +12,18 @@ export function witnessPatch(typed: string): { kind: 'witness'; text?: string } 
   return text ? { kind: 'witness', text } : { kind: 'witness' }
 }
 
+// Opening someone else's snap on its own page is seeing it too, so it is witnessed the same way a
+// silent Next is, and the person who shared it is told. Never for one's own snap, a hidden one, or
+// one this person has already seen. Where each witness has their own seen (`witnessedBy` is
+// present), only theirs counts; the server still refuses anyone who does not witness.
+export function witnessesOnOpen(
+  s: { by: string; hiddenAt: string | null; witnessedAt: string | null; witnessedBy?: Partial<Record<string, string>> },
+  me: string,
+): boolean {
+  if (s.by === me || s.hiddenAt !== null) return false
+  return s.witnessedBy ? s.witnessedBy[me] === undefined : s.witnessedAt === null
+}
+
 export const SWIPE_UP_PX = 60
 export const isSwipeUp = (startY: number, endY: number) => startY - endY >= SWIPE_UP_PX
 

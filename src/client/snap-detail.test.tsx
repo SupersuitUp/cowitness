@@ -62,7 +62,21 @@ describe('SnapDetail', () => {
     render(<SnapDetail snap={snap()} me="ana" names={NAMES} />)
     fireEvent.change(screen.getByPlaceholderText('Say something'), { target: { value: 'love it' } })
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send' })) })
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/us/snaps/s1')
+    expect(fetchMock.mock.calls.at(-1)![0]).toBe('/api/us/snaps/s1')
+  })
+
+  it('opening the other member\'s snap here counts as seeing it, so they are told', async () => {
+    await act(async () => { render(<SnapDetail snap={snap()} me="ana" names={NAMES} />) })
+    const witnessed = fetchMock.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.body === JSON.stringify({ kind: 'witness' }))
+    expect(witnessed).toHaveLength(1)
+    expect(witnessed[0][0]).toBe('/api/us/snaps/s1')
+    expect(witnessed[0][1]).toEqual(expect.objectContaining({ method: 'PATCH' }))
+  })
+  it('opening my own snap, or one already seen, marks nothing', async () => {
+    const { unmount } = await act(async () => render(<SnapDetail snap={snap()} me="ben" names={NAMES} />))
+    unmount()
+    await act(async () => { render(<SnapDetail snap={snap({ witnessedAt: '2026-09-27T21:00:00.000Z' })} me="ana" names={NAMES} />) })
+    expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.body === JSON.stringify({ kind: 'witness' }))).toBe(false)
   })
 
   it('my snap says who witnessed it, even when they said nothing', () => {
