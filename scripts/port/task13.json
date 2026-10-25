@@ -453,6 +453,8 @@
     "src/client/dual-camera.ts",
     "src/client/dual-camera.test.ts",
     "src/client/reaction-send.ts",
-    "src/client/reaction-send.test.ts"
+    "src/client/reaction-send.test.ts",
+    "src/client/witness-flow.ts",
+    "src/client/witness-flow.test.ts"
   ]
 }
