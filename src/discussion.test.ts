@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendCommentOnce, setEmojiReaction } from './discussion.js'
+import { appendCommentOnce, isSingleEmoji, setEmojiReaction } from './discussion.js'
 
 describe('shared discussion rules with different host anchors', () => {
   it('retries one comment without changing its attribution, words or anchor', () => {
@@ -25,5 +25,10 @@ describe('shared discussion rules with different host anchors', () => {
     expect(setEmojiReaction(all, mark, false, same).reactions).toEqual([other, elsewhere])
     expect(setEmojiReaction([], mark, false, same).changed).toBe(false)
     expect(setEmojiReaction([], mark, true, same).reactions).toEqual([mark])
+  })
+  // us-template#7: any emoji, not only the six quick picks, and still exactly one.
+  it('accepts any single emoji and refuses words, pairs and non-strings', () => {
+    for (const ok of ['❤️', '🙏', '🦄', '🫶🏽', '👩‍👩‍👧', '🏳️‍🌈', '🇪🇹', '1️⃣', '🏴󠁧󠁢󠁳󠁣󠁴󠁿', '👍🏿']) expect(isSingleEmoji(ok), ok).toBe(true)
+    for (const bad of ['', 'a', 'love', '❤️❤️', '🙏 ', ' 🙏', '🙏a', '1', '<b>', '🇪', null, 3, {}]) expect(isSingleEmoji(bad), String(bad)).toBe(false)
   })
 })

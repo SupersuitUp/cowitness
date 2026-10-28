@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { DiscussionInput, DiscussionSend, EmojiReactions, readDiscussionDraft, writeDiscussionDraft, clearDiscussionDraft } from './discussion-controls.js'
+import { DiscussionInput, DiscussionSend, EmojiFreePick, EmojiReactions, readDiscussionDraft, writeDiscussionDraft, clearDiscussionDraft } from './discussion-controls.js'
 import { afterEach } from 'vitest'
 afterEach(cleanup)
 
@@ -17,6 +17,34 @@ describe('portable discussion controls', () => {
     render(<EmojiReactions me="reader" names={{ writer: 'Writer' }} marks={[{ by: 'writer', emoji: '🥹' }]} existingOnly onToggle={vi.fn()} />)
     expect(screen.getByRole('button', { name: '🥹 · Writer' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+  it('shows an emoji someone picked outside the six, so everyone can see and tap it', () => {
+    const toggle = vi.fn()
+    render(<EmojiReactions me="reader" names={{ writer: 'Writer' }} marks={[{ by: 'writer', emoji: '🦄' }]} onToggle={toggle} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add 🦄' })); expect(toggle).toHaveBeenCalledWith('🦄', true)
+    expect(screen.queryByRole('button', { name: 'Add any emoji' })).toBeNull()
+    cleanup()
+    render(<EmojiReactions me="reader" names={{ writer: 'Writer' }} marks={[{ by: 'writer', emoji: '🦄' }]} existingOnly onToggle={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '🦄 · Writer' })).toBeInTheDocument()
+  })
+  it('anyEmoji opens a free pick that sends one emoji and ignores words', () => {
+    const toggle = vi.fn()
+    render(<EmojiReactions me="reader" names={{}} marks={[]} anyEmoji onToggle={toggle} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add any emoji' }))
+    const field = screen.getByRole('textbox', { name: 'Pick any emoji' })
+    fireEvent.change(field, { target: { value: 'hi' } }); expect(toggle).not.toHaveBeenCalled()
+    fireEvent.change(field, { target: { value: 'hi🫶🏽' } }); expect(toggle).toHaveBeenCalledWith('🫶🏽', true)
+    expect(screen.queryByRole('textbox')).toBeNull()
+  })
+  it('EmojiFreePick stands alone for a host with its own reaction row, and Escape closes it', () => {
+    const pick = vi.fn()
+    render(<EmojiFreePick onPick={pick} label="React with any emoji" />)
+    fireEvent.click(screen.getByRole('button', { name: 'React with any emoji' }))
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Pick any emoji' }), { key: 'Escape' })
+    expect(screen.queryByRole('textbox')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'React with any emoji' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Pick any emoji' }), { target: { value: '🇪🇹' } })
+    expect(pick).toHaveBeenCalledWith('🇪🇹')
   })
   it('preserves host input labels, styles and send rules', () => {
     const change = vi.fn(); const send = vi.fn()

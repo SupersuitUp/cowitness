@@ -319,6 +319,9 @@ describe('emoji-first and optional spoken reactions', () => {
     expect(applySnapPatch(two, 'ana', { kind: 'reaction', emoji: '❤️', value: true }, { now: 'later' }).reactions).toEqual(two.reactions)
     expect(applySnapPatch(two, 'ana', { kind: 'reaction', emoji: '❤️', value: false }).reactions).toEqual([{ by: 'ben', emoji: '❤️', at: NOW }])
     expect(() => applySnapPatch(snap(), 'ana', { kind: 'reaction', emoji: 'anything', value: true })).toThrow(/reaction/)
+    // us-template#7: a free pick outside the six is a reaction too; two emoji or a word are not.
+    expect(applySnapPatch(snap(), 'ana', { kind: 'reaction', emoji: '🦄', value: true }, { now: NOW }).reactions).toEqual([{ by: 'ana', emoji: '🦄', at: NOW }])
+    expect(() => applySnapPatch(snap(), 'ana', { kind: 'reaction', emoji: '🦄🦄', value: true })).toThrow(/reaction/)
   })
   it('can discard only the actor’s own wordless settled voice reaction, retaining its record', () => {
     const c = { id: 'c1', by: 'ana', text: '', at: NOW, recording: { path: 'audio', contentType: 'audio/mp4', durationSec: 4, status: 'failed' as const, reason: NOTHING_HEARD } }

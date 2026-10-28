@@ -52,6 +52,15 @@ describe('WitnessSession, typing only', () => {
     expect(screen.getByRole('button', { name: 'Add ❤️' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('takes any emoji through the free pick, not only the six (us-template#7)', async () => {
+    fetchMock.mockResolvedValue(Response.json({ reactions: [{ by: 'ana', emoji: '🦄', at: 'x' }] }))
+    render(<WitnessSession queue={[snap('a')]} me="ana" names={NAMES} onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add any emoji' }))
+    await act(async () => { fireEvent.change(screen.getByRole('textbox', { name: 'Pick any emoji' }), { target: { value: '🦄' } }) })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ kind: 'reaction', emoji: '🦄', value: true })
+    expect(screen.getByRole('button', { name: 'Remove 🦄' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('Next with nothing typed marks it witnessed and moves on', async () => {
     render(<WitnessSession queue={[snap('a'), snap('b')]} me="ana" names={NAMES} onClose={() => {}} />)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Next' })) })
