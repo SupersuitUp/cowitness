@@ -3,7 +3,7 @@ import type { Circle } from './features.js'
 import type { Comment, CowitnessSummary, FiledMedia, Recording, Snap, SnapPatch } from './types.js'
 import { TAGS_MAX_DEFAULT, validateJustUs, validateTags } from './tag-rules.js'
 import { RuleError, addComment, heartComment, lastMessageFromOther, validateClip, audioExtension, MESSAGE_MAX, NOTHING_HEARD } from './shared-rules.js'
-import { DISCUSSION_EMOJIS, setEmojiReaction } from './discussion.js'
+import { isSingleEmoji, setEmojiReaction } from './discussion.js'
 
 // Cowitness, as rules. Pure and synchronous so every one of them is tested without Firebase;
 // snaps-store.ts only reads, calls one of these, and writes.
@@ -68,7 +68,7 @@ export function applySnapPatch(
     case 'comment-heart':
       return heartComment(s, actor, patch.commentId, patch.value, { now })
     case 'reaction': {
-      if (!(DISCUSSION_EMOJIS as readonly string[]).includes(patch.emoji) || typeof patch.value !== 'boolean') throw new RuleError('unsupported emoji reaction', 400)
+      if (!isSingleEmoji(patch.emoji) || typeof patch.value !== 'boolean') throw new RuleError('unsupported emoji reaction', 400)
       const result = setEmojiReaction(s.reactions ?? [], { by: actor, emoji: patch.emoji, at: now }, patch.value)
       return result.changed ? { ...s, reactions: result.reactions } : s
     }

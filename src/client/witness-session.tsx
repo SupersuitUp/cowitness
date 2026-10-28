@@ -375,7 +375,7 @@ export function WitnessSession({ queue, me, names, onClose, mic, listen, onReque
             {snap.caption && <p className="mb-1 whitespace-pre-wrap text-[17px] leading-snug" style={{ fontFamily: SERIF }}>{snap.caption}</p>}
             <SnapTime at={snap.takenAt} />
             <div className="mt-3"><EmojiReactions me={me} names={names} marks={reactions[snap.id] ?? []} busy={reacting || saving}
-              accent="#ffffff" hairline="#ffffff40" onToggle={(emoji, value) => { void react(emoji, value) }} /></div>
+              accent="#ffffff" hairline="#ffffff40" anyEmoji onToggle={(emoji, value) => { void react(emoji, value) }} /></div>
             {reactionError && <p role="alert" className="mt-1 text-sm" style={{ color: ACCENT_SOFT }}>Reaction not saved. Try again.</p>}
 
             {listening && (

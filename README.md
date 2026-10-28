@@ -305,9 +305,14 @@ their authorization, send transport and attachments. `readDiscussionDraft`, `wri
 and `clearDiscussionDraft(key, sentText)` preserve existing session-storage keys and avoid
 clearing newer words after a slower send. Scope draft keys to the person and content item.
 
-`EmojiReactions({me, names, marks, onToggle, busy?, existingOnly?, accent?, hairline?})` draws
-the shared six-emoji palette with pressed state, counts and names. Standalone screens may pass
-their own accent and hairline without configuring Cowitness. Pure `appendCommentOnce` and
+`EmojiReactions({me, names, marks, onToggle, busy?, existingOnly?, anyEmoji?, accent?, hairline?})` draws
+the shared six quick picks with pressed state, counts and names, followed by any other emoji
+someone has already used on that item. `anyEmoji` adds a free pick: a **+** that opens the phone's
+own emoji keyboard and sends one emoji. It is opt-in because the host's server has to accept the
+pick: validate a reaction with `isSingleEmoji(value)` from the root entry (one emoji grapheme, a
+flag, a keycap, skin tones and ZWJ sequences included; words and two emoji refused) rather than
+membership in `DISCUSSION_EMOJIS`, which stays as the quick-pick list. Cowitness's own snap rules
+already do. Standalone screens may pass their own accent and hairline without configuring Cowitness. Pure `appendCommentOnce` and
 `setEmojiReaction` in the root entry provide retry-id and toggle rules; hosts supply any passage
 anchor comparison and persist inside their own transaction.
 
