@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { DiscussionInput, DiscussionSend, EmojiReactions, readDiscussionDraft, writeDiscussionDraft, clearDiscussionDraft } from './discussion-controls.js'
+import { DiscussionInput, DiscussionSend, EmojiFreePick, EmojiReactions, readDiscussionDraft, writeDiscussionDraft, clearDiscussionDraft } from './discussion-controls.js'
 import { afterEach } from 'vitest'
 afterEach(cleanup)
 
@@ -35,6 +35,16 @@ describe('portable discussion controls', () => {
     fireEvent.change(field, { target: { value: 'hi' } }); expect(toggle).not.toHaveBeenCalled()
     fireEvent.change(field, { target: { value: 'hi🫶🏽' } }); expect(toggle).toHaveBeenCalledWith('🫶🏽', true)
     expect(screen.queryByRole('textbox')).toBeNull()
+  })
+  it('EmojiFreePick stands alone for a host with its own reaction row, and Escape closes it', () => {
+    const pick = vi.fn()
+    render(<EmojiFreePick onPick={pick} label="React with any emoji" />)
+    fireEvent.click(screen.getByRole('button', { name: 'React with any emoji' }))
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Pick any emoji' }), { key: 'Escape' })
+    expect(screen.queryByRole('textbox')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'React with any emoji' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Pick any emoji' }), { target: { value: '🇪🇹' } })
+    expect(pick).toHaveBeenCalledWith('🇪🇹')
   })
   it('preserves host input labels, styles and send rules', () => {
     const change = vi.fn(); const send = vi.fn()

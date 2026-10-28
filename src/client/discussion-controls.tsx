@@ -27,6 +27,30 @@ function lastGrapheme(text: string): string {
   return parts.length ? parts[parts.length - 1].segment : ''
 }
 
+// A + that becomes a field for the phone's own emoji keyboard and hands back exactly one emoji.
+// Exported so a host with its own reaction row (a game, a card) gets the same pick without
+// rebuilding it; anything typed that is not one emoji is ignored.
+export function EmojiFreePick({ onPick, busy, style, accent = ACCENT, hairline = HAIRLINE, label = 'Add any emoji' }: {
+  onPick(emoji: string): void; busy?: boolean; style?: CSSProperties; accent?: string; hairline?: string; label?: string
+}) {
+  const [picking, setPicking] = useState(false)
+  const [draft, setDraft] = useState('')
+  const close = () => { setPicking(false); setDraft('') }
+  if (!picking) return <button type="button" disabled={busy} aria-label={label} title="Any emoji" onClick={() => setPicking(true)}
+    className="rounded-full border px-3 text-xl disabled:opacity-40"
+    style={{ borderColor: hairline, ...style, minHeight: 44, minWidth: 44 }}>+</button>
+  return <input autoFocus type="text" value={draft} disabled={busy} aria-label="Pick any emoji" placeholder="Any emoji"
+    enterKeyHint="done" autoComplete="off" autoCorrect="off" spellCheck={false}
+    onChange={(e) => {
+      const emoji = lastGrapheme(e.target.value)
+      if (!isSingleEmoji(emoji)) { setDraft(e.target.value); return }
+      close(); onPick(emoji)
+    }}
+    onBlur={close} onKeyDown={(e) => { if (e.key === 'Escape') close() }}
+    className="rounded-full border px-3 text-xl"
+    style={{ borderColor: accent, ...style, minHeight: 44, width: 120, fontSize: 20 }} />
+}
+
 // The six quick picks come first, then any other emoji someone has already used here, in the
 // order it first appeared, so a free pick is visible and tappable by everyone. `anyEmoji` adds a
 // free pick: a + that opens the phone's own emoji keyboard and accepts one emoji (us-template#7).
@@ -37,17 +61,8 @@ export function EmojiReactions({ me, names, marks, busy, existingOnly, anyEmoji,
   busy?: boolean; existingOnly?: boolean; anyEmoji?: boolean; onToggle(emoji: string, value: boolean): void; style?: CSSProperties
   accent?: string; hairline?: string
 }) {
-  const [picking, setPicking] = useState(false)
-  const [draft, setDraft] = useState('')
   const quick = DISCUSSION_EMOJIS as readonly string[]
   const extras = [...new Set(marks.map((r) => r.emoji))].filter((e) => !quick.includes(e) && isSingleEmoji(e))
-  const pick = (text: string) => {
-    setDraft(text)
-    const emoji = lastGrapheme(text)
-    if (!isSingleEmoji(emoji)) return
-    setDraft(''); setPicking(false)
-    if (!marks.some((r) => r.by === me && r.emoji === emoji)) onToggle(emoji, true)
-  }
   return <div className="flex flex-wrap gap-1" role="group" aria-label={existingOnly ? 'Reactions' : 'Choose a reaction'}>
     {[...quick, ...extras].map((emoji) => {
       const people = [...new Set(marks.filter((r) => r.emoji === emoji).map((r) => r.by))]
@@ -61,17 +76,8 @@ export function EmojiReactions({ me, names, marks, busy, existingOnly, anyEmoji,
         {emoji}{people.length > 0 && <span className="ml-1 text-sm">{people.length}</span>}
       </button>
     })}
-    {anyEmoji && !existingOnly && (picking
-      ? <input autoFocus type="text" value={draft} disabled={busy} aria-label="Pick any emoji" placeholder="Any emoji"
-          enterKeyHint="done" autoComplete="off" autoCorrect="off" spellCheck={false}
-          onChange={(e) => pick(e.target.value)}
-          onBlur={() => { setPicking(false); setDraft('') }}
-          onKeyDown={(e) => { if (e.key === 'Escape') { setPicking(false); setDraft('') } }}
-          className="rounded-full border px-3 text-xl"
-          style={{ borderColor: accent, ...style, minHeight: 44, width: 120, fontSize: 20 }} />
-      : <button type="button" disabled={busy} aria-label="Add any emoji" title="Any emoji" onClick={() => setPicking(true)}
-          className="rounded-full border px-3 text-xl disabled:opacity-40"
-          style={{ borderColor: hairline, ...style, minHeight: 44, minWidth: 44 }}>+</button>)}
+    {anyEmoji && !existingOnly && <EmojiFreePick busy={busy} accent={accent} hairline={hairline} style={style}
+      onPick={(emoji) => { if (!marks.some((r) => r.by === me && r.emoji === emoji)) onToggle(emoji, true) }} />}
   </div>
 }
 
