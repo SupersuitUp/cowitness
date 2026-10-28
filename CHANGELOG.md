@@ -2,6 +2,18 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.9 (2026-10-28)
+
+- Any single emoji is a reaction, not only the six quick picks. `isSingleEmoji(value)`, exported
+  from the root entry, accepts exactly one emoji (flags, keycaps, skin tones and joined sequences
+  included) and refuses words or two emoji; the snap rules now validate reactions with it.
+- `EmojiReactions` shows any emoji already used on an item after the six, so everyone can see and
+  tap it, and a new opt-in `anyEmoji` prop adds a + that opens the phone's own emoji keyboard and
+  sends the one emoji typed. It is opt-in because a host whose server still checks the six would
+  refuse the pick. `WitnessSession` turns it on.
+- `EmojiFreePick`, the free pick on its own, is exported from the client entry for hosts that draw
+  their own reaction row.
+
 ## 0.3.8 (2026-10-20)
 
 - A pinch on the back camera in `SnapCamera` no longer freezes the page. The camera is asked for one
