@@ -36,6 +36,8 @@ function Pill({ label, s }: { label: string; s: Streak }) {
 // The household streak is one count for everyone who shares, in the app's own time zone. A person
 // who does not share (`shares` false) is shown no streak at all: a count over what they can see would
 // be wrong, and one over everything would tell them private days exist.
+const listOf = (xs: string[]) => (xs.length < 3 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`)
+
 export function StreakStrip({ rows, me, names, shares = true, timeZone }: { rows: SnapRow[]; me: Member; names: MemberNames; shares?: boolean; timeZone?: StreakZones }) {
   const rule = clientFeatures().streak
   const [now, setNow] = useState<Date | null>(null)
@@ -55,18 +57,25 @@ export function StreakStrip({ rows, me, names, shares = true, timeZone }: { rows
   }
   const keys = Object.keys(names)
   const s = timeZone ? zonedStreaksOf(rows, now, keys, timeZone) : streaksOf(rows, now, keys)
-  const other: Member = otherIn(names, me)
+  // Everyone else, in the order the server named them: one pill each, so a group of three or more sees every person
+  // (the strip once drew exactly one other, which hid the third member of a continent). Two people read as before.
+  const others: Member[] = keys.filter((k) => k !== me)
+  if (!others.length) others.push(otherIn(names, me))
   const mine = s[me]
+  const waiting = others.filter((o) => !s[o]?.postedToday).map((o) => names[o])
+  const shared = others.length === 1
+    ? (waiting.length ? `Waiting on ${waiting[0]}.` : `${names[others[0]]} did too.`)
+    : (waiting.length ? `Waiting on ${listOf(waiting)}.` : 'Everyone else did too.')
   return (
     <section aria-label="Streaks" className="px-4">
       <ul className="flex gap-2">
         <Pill label="You" s={mine} />
-        <Pill label={names[other]} s={s[other]} />
+        {others.map((o) => <Pill key={o} label={names[o]} s={s[o]} />)}
         <Pill label="Together" s={s.together} />
       </ul>
       <p className="mt-2 text-center text-[14px]" style={{ color: MUTED, fontFamily: SERIF }}>
         {mine.postedToday
-          ? `You shared today. ${s[other].postedToday ? `${names[other]} did too.` : `Waiting on ${names[other]}.`}`
+          ? `You shared today. ${shared}`
           : mine.count > 0
             ? `Share a snap today to keep your ${streakWord(mine.count)}.`
             : 'Share a snap today to start a streak.'}

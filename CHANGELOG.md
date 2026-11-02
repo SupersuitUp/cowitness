@@ -2,6 +2,12 @@
 
 Version convention: below 1.0, an addition is a patch and a breaking change is a minor (npm reads `^0.1.2` as 0.1.x only, so templates take a patch on their own and hold a minor for a person).
 
+## 0.3.10 (2026-11-02)
+
+- `StreakStrip` draws a pill for every person, then Together, when more than two share. It drew exactly
+  one other, so a third member (a continent of three) had a streak nobody could see. The line under it
+  names everyone who has not shared yet today, or says everyone else did. Two people read as before.
+
 ## 0.3.9 (2026-10-28)
 
 - Any single emoji is a reaction, not only the six quick picks. `isSingleEmoji(value)`, exported

@@ -28,6 +28,19 @@ describe('StreakStrip', () => {
     render(<StreakStrip rows={[row('ben', 26), row('ben', 25)]} me="ben" names={NAMES} />)
     expect(screen.getByText('Share a snap today to keep your 2-day streak.')).toBeInTheDocument()
   })
+  it('shows everyone else too when more than two people share', () => {
+    const three = { ana: 'Ana', ben: 'Ben', cy: 'Cy' }
+    const r3 = (by: string, d: number): SnapRow => ({ ...row('ana', d), id: `${by}${d}`, by })
+    render(<StreakStrip rows={[r3('ana', 27), r3('cy', 27), r3('cy', 26), r3('ben', 26)]} me="ana" names={three} />)
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['🔥1You', '🔥1Ben', '🔥2Cy', '0Together'])
+    expect(screen.getByText('You shared today. Waiting on Ben.')).toBeInTheDocument()
+  })
+  it('says when everyone else shared today too', () => {
+    const three = { ana: 'Ana', ben: 'Ben', cy: 'Cy' }
+    const r3 = (by: string, d: number): SnapRow => ({ ...row('ana', d), id: `${by}${d}`, by })
+    render(<StreakStrip rows={[r3('ana', 27), r3('ben', 27), r3('cy', 27)]} me="ana" names={three} />)
+    expect(screen.getByText('You shared today. Everyone else did too.')).toBeInTheDocument()
+  })
   it('invites a first streak when there is none', () => {
     render(<StreakStrip rows={[]} me="ben" names={NAMES} />)
     expect(screen.getByText('Share a snap today to start a streak.')).toBeInTheDocument()
